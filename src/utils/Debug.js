@@ -2,8 +2,8 @@
  * Debug Class.
  */
 
-const Constants = require('./../Constants');
-const Helpers = require('./Helpers');
+import Constants from '../Constants';
+import Helpers from './Helpers';
 
 class Debug {
 
@@ -41,4 +41,4 @@ class Debug {
 
 }
 
-module.exports = Debug;
+export default Debug;

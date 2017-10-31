@@ -4,8 +4,8 @@
  * Any Interface exposed through this export will be available.
  */
 
-const twitch = require('./../interfaces/Twitch');
+import twitch from '../interfaces/Twitch';
 
-module.exports = {
+export {
     twitch,
 };

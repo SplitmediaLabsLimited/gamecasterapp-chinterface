@@ -1,9 +1,76 @@
 {
-  "name": "chinterface",
-  "version": "0.0.1",
-  "description": "Universal Chat Interface.",
-  "main": "src/Chat.js",
+  "name": "chinterface-v2",
+  "version": "0.7.2",
+  "description": "Universal Chat interface library for popular stream services",
+  "main": "dist/chinterface.common.js",
+  "module": "dist/chinterface.es.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  }
+    "build": "clear && rm -rf ./dist/*.* && rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
+    "build:watch": "clear && rm -rf ./dist/*.* && rollup -c --environment PRODUCTION -w",
+    "test": "jest",
+    "test:watch": "npm run test -- --watch",
+    "flow": "flow check",
+    "flow:watch": "flow-watch",
+    "format": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'"
+  },
+  "devDependencies": {
+    "@cvpcasada/tmi.js": "1.3.2",
+    "babel-eslint": "7.2.3",
+    "babel-plugin-add-module-exports": "^0.2.1",
+    "babel-plugin-external-helpers": "^6.22.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-preset-env": "^1.6.0",
+    "body-parser": "^1.17.2",
+    "cross-env": "^5.0.2",
+    "eslint": "3.19.0",
+    "eslint-config-react-app": "1.0.5",
+    "eslint-loader": "1.7.1",
+    "eslint-plugin-flowtype": "2.33.0",
+    "eslint-plugin-import": "2.2.0",
+    "eslint-plugin-jsx-a11y": "5.0.3",
+    "eslint-plugin-react": "^7.2.0",
+    "events": "^1.1.1",
+    "flow-bin": "^0.52.0",
+    "jest-cli": "^20.0.4",
+    "lodash": "^4.17.4",
+    "mocha": "3.3.0",
+    "npm-run-all": "^4.0.2",
+    "prettier": "^1.5.3",
+    "rollup": "^0.45.2",
+    "rollup-plugin-babel": "^2.7.1",
+    "rollup-plugin-babel-minify": "^3.1.2",
+    "rollup-plugin-commonjs": "^8.0.2",
+    "rollup-plugin-inject": "^2.0.0",
+    "rollup-plugin-json": "^2.3.0",
+    "rollup-plugin-node-resolve": "^3.0.0",
+    "rollup-plugin-replace": "^1.1.1",
+    "rollup-watch": "^4.3.1",
+    "serve-static": "^1.12.3"
+  },
+  "peerDependencies": {
+    "@cvpcasada/tmi.js": ">= 1.3.2"
+  },
+  "files": [
+    "dist/chinterface.common.js",
+    "dist/chinterface.es.js",
+    "dist/chinterface.min.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://git.player.me/player/chinterface-v2.git"
+  },
+  "keywords": [
+    "Chat",
+    "Twitch",
+    "Youtube",
+    "Mixer"
+  ],
+  "author": "SplitmediaLabs Limited",
+  "license": "MIT",
+  "bugs": {
+    "url": ""
+  },
+  "homepage": ""
 }

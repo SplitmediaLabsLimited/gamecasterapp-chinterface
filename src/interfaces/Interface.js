@@ -2,7 +2,7 @@
  * Base Interface Class.
  */
 
-const Helpers = require('./../utils/Helpers');
+import Helpers from './../utils/Helpers';
 
 class Interface {
 
@@ -121,6 +121,8 @@ class Interface {
         } else {
             this._config[key] = value;
         }
+
+        return this;
     }
 
     /**
@@ -213,4 +215,4 @@ class Interface {
 
 }
 
-module.exports = Interface;
+export default Interface;

@@ -2,8 +2,10 @@
  * Library Entry Point.
  */
 
-const Debug = require('./utils/Debug');
-const InterfaceBag = require('./bags/InterfaceBag');
+// @flow
+import Debug from './utils/Debug';
+import * as InterfaceBag from './bags/InterfaceBag';
+import type { Config } from './types';
 
 class Api {
 
@@ -84,4 +86,4 @@ class Api {
 
 }
 
-module.exports = new Api;
+export default new Api();

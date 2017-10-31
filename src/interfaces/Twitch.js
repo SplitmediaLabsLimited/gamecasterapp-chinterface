@@ -2,7 +2,8 @@
  * Twitch Chat Interface.
  */
 
-const Interface = require('./Interface');
+import tmi from '@cvpcasada/tmi.js';
+import Interface from './Interface';
 
 class Twitch extends Interface {
 
@@ -261,4 +262,4 @@ class Twitch extends Interface {
 
 }
 
-module.exports = new Twitch;
+export default new Twitch();

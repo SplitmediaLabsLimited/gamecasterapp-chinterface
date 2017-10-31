@@ -1,0 +1,16 @@
+[ignore]
+.*/node_modules/flow-remove-types/.*
+.*/node_modules/rollup-plugin-flow/.*
+.*/node_modules/eslint-plugin-jsx-a11y/.*
+.*/node_modules/node-uuid/.*
+.*/dist/.*
+.*/examples/.*
+
+[include]
+
+[libs]
+
+[options]
+suppress_comment=.*\\$FlowFixMe
+suppress_comment=.*\\$FlowInvalidInputTest
+unsafe.enable_getters_and_setters=true
