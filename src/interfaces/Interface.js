@@ -99,18 +99,25 @@ class Interface {
         if (Array.isArray(this._callbacks[evnt]) && this._callbacks[evnt].length) {
             this._callbacks[evnt].forEach(listener => {
                 listener.callback(data);
-
-                if (listener.once) {
-                    console.log('TODO - Remove ONCE listeners.');
-                }
             });
+        }
+    }
+
+    /**
+     * Deletes a listener event.
+     *
+     * @param {String} evnt
+     */
+    destroy(evnt) {
+        if (Array.isArray(this._callbacks[evnt]) && this._callbacks[evnt].length) {
+            delete this._callbacks[evnt];
         }
     }
 
     /**
      * Sets Config value(s) for the Interface.
      *
-     * @param {string} key
+     * @param {*} [key]
      * @param {*} [value]
      */
     setConfig(key, value = null) {
@@ -135,9 +142,9 @@ class Interface {
     getConfig(key = null) {
         if (key !== null) {
             return this._config[key];
-        } else {
-            return this._config;
         }
+
+        return this._config;
     }
 
     /**

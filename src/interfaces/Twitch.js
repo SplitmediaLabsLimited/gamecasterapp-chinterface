@@ -3,10 +3,10 @@
  */
 
 import tmi from '@cvpcasada/tmi.js';
+import axios from 'axios';
 import Interface from './Interface';
 
 class Twitch extends Interface {
-
     /**
      * Initialize the Interface.
      */
@@ -26,57 +26,65 @@ class Twitch extends Interface {
 
         return new Promise((resolve, reject) => {
             const clientId = this.getConfig('clientId');
-            let channel = this.getConfig('channel');
 
-            if (
-                clientId !== undefined && clientId.length &&
-                channel !== undefined && channel.length
-            ) {
-                const username = this.getConfig('username');
-                const accessToken = this.getConfig('accessToken');
-                let identity = {};
-
-                if (!Array.isArray(channel)) {
-                    channel = [channel];
-                }
-
-                if (
-                    username !== undefined && username.length &&
-                    accessToken !== undefined && accessToken.length
-                ) {
-                    identity = {
-                        username,
-                        password: accessToken,
-                    };
-                }
-
-                this._client = new tmi.client({
-                    channels: channel,
-                    identity,
-                    options: {
-                        clientId,
-                        debug: false,
-                    },
-                    connection: {
-                        reconnect: true,
-                        secure: true,
+            if (clientId !== undefined && clientId.length) {
+                this._http = axios.create({
+                    baseURL: 'https://api.twitch.tv/kraken/',
+                    headers: {
+                        'Client-ID': this.getConfig('clientId'),
+                        'Accept': 'application/vnd.twitchtv.v5+json',
+                        'Authorization': `OAuth ${this.getConfig('accessToken')}`,
                     },
                 });
 
-                this._client.addListener('message', (channel, user, message, self) => {
-                    this.parseMessage({
-                        channel,
-                        user,
-                        message,
-                        self,
+                this.getTwitchUser()
+                    .then(channel => {
+                        const username = this.getConfig('username');
+                        const accessToken = this.getConfig('accessToken');
+                        let identity = {};
+
+                        if (!Array.isArray(channel)) {
+                            channel = [channel];
+                        }
+
+                        if (
+                            username !== undefined && username.length &&
+                            accessToken !== undefined && accessToken.length
+                        ) {
+                            identity = {
+                                username,
+                                password: accessToken,
+                            };
+                        }
+
+                        this._client = new tmi.client({
+                            channels: channel,
+                            identity,
+                            options: {
+                                clientId,
+                                debug: false,
+                            },
+                            connection: {
+                                reconnect: this.getConfig('reconnect') || true,
+                                secure: true,
+                            },
+                        });
+
+                        this._client.on('chat', (channel, user, message, self) => {
+                            this.parseMessage({
+                                channel,
+                                user,
+                                message,
+                                self,
+                            });
+                        });
+                        this._client.on('connected', () => resolve());
+
+                        this._client.connect();
+                    })
+                    .catch(e => {
+                        reject('Could not fetch Twitch User data.', e);
                     });
-                });
-                this._client.addListener('connected', () => resolve());
-                this._client.addListener('connectfail', () => {
-                    reject('Could not connect to Twitch.');
-                });
-
-                this._client.connect();
             } else {
                 reject('No ClientID/Channel specified.');
             }
@@ -110,13 +118,17 @@ class Twitch extends Interface {
     /**
      * Parses a message in to the unified format.
      *
-     * @param {Object} data
+     * @param {String} channel
+     * @param {Object} user
+     * @param {Object} message
+     * @param {Object} self
      */
     parseMessage({ channel, user, message, self }) {
         if (user['message-type'] != 'chat') {
             return;
         }
 
+        const rawMessage = message;
         let isBroadcaster = false;
         let emotes = null;
 
@@ -141,9 +153,11 @@ class Twitch extends Interface {
         this.emit('message', {
             username: user['display-name'],
             body: message,
+            raw: rawMessage,
             timestamp: user['sent-ts'] ? parseInt(user['sent-ts']) : null,
             extra: {
                 colour: user.color,
+                badges: user.badges || {},
                 subscriber: user.subscriber,
                 mod: user.mod,
                 turbo: user.turbo,
@@ -162,8 +176,6 @@ class Twitch extends Interface {
         if (rawEmotes === undefined || rawEmotes === null) {
             return message;
         }
-
-        console.log('Raw', rawEmotes);
 
         const rawKeys = Object.keys(rawEmotes);
         let offset = 0;
@@ -201,9 +213,63 @@ class Twitch extends Interface {
             newMessage = `${left}${middle}${right}`;
         });
 
-        console.log(newMessage);
-
         return newMessage;
+    }
+
+    /**
+     * Fetches a list of badges for all connected channels or a given list of channels.
+     *
+     * @return {Promise}
+     */
+    getBadges() {
+        const userId = this.getConfig('userId');
+
+        if (!userId) {
+            throw new Error('Cannot fetch badges. User ID is undefined.');
+        }
+
+        return this.api('get', `chat/${userId}/badges`);
+    }
+
+    /**
+     * Fetch the user's Twitch User ID if config is not set
+     *
+     * @returns {Promise}
+     */
+    getTwitchUser() {
+        const accessToken = this.getConfig('accessToken');
+        const channel = this.getConfig('channel');
+        const userId = this.getConfig('userId');
+
+        if (
+            !channel &&
+            (accessToken === undefined || !accessToken.length)
+        ) {
+            throw new Error('Cannot fetch Twitch User data. Access token not set.');
+        }
+
+        return new Promise((resolve, reject) => {
+            if (channel && channel.length && userId) {
+                resolve(channel);
+            }
+
+            this.api('get', 'user')
+                .then(data => {
+                    console.log(data);
+                    const channel = data.name || '';
+                    const userId = data._id || null;
+
+                    this.setConfig({
+                        channel,
+                        userId,
+                    });
+                    
+                    resolve(channel);
+                })
+                .catch(e => {
+                    reject(e);
+                })
+        })
     }
 
     /**
@@ -260,6 +326,37 @@ class Twitch extends Interface {
         return true;
     }
 
+    /**
+     * Pass-through function to listen to any supported event in TMI.
+     * https://docs.tmijs.org/v1.2.1/Events.html
+     *
+     * @param {String} evnt
+     * @param {*}      callback
+     *
+     * @returns {Twitch}
+     */
+    clientOn(evnt, callback) {
+        this._client.on(evnt, callback);
+
+        return this;
+    }
+
+    /**
+     * Query the Twitch API for a given method, endpoint and query param.
+     *
+     * @param {String} method
+     * @param {String} url
+     * @param {Object} data
+     *
+     * @return {Promise}
+     */
+    api(method, url, data = {}) {
+        return this._http.request({
+            method,
+            url,
+            data,
+        });
+    }
 }
 
 export default new Twitch();

@@ -6,4 +6,6 @@ export type Config = {
     debug: ?boolean,
     clientId: ?string,
     accessToken: ?string,
+    userId: ?number,
+    reconnect: ?boolean,
 };
