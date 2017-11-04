@@ -2,8 +2,8 @@
  * Debug Class.
  */
 
-import Constants from '../Constants';
-import Helpers from './Helpers';
+import Constants from '../constants';
+import Helpers from './helpers';
 
 class Debug {
 

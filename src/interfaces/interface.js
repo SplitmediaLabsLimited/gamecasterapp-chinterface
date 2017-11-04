@@ -2,7 +2,7 @@
  * Base Interface Class.
  */
 
-import Helpers from './../utils/Helpers';
+import Helpers from './../utils/helpers';
 
 class Interface {
 
@@ -62,31 +62,19 @@ class Interface {
      *
      * @param {string|Array} evnt
      * @param {Function} callback
-     * @param {boolean} [once]
      */
-    on(evnt, callback, once = false) {
+    on(evnt, callback) {
         if (Array.isArray(evnt)) {
-            evnt.forEach(e => this.on(e, callback, once));
+            evnt.forEach(e => this.on(e, callback));
         } else {
             if (!Array.isArray(this._callbacks[evnt])) {
                 this._callbacks[evnt] = [];
             }
 
             this._callbacks[evnt].push({
-                callback,
-                once,
+                callback
             });
         }
-    }
-
-    /**
-     * Shorthand function for listening to a single event once.
-     *
-     * @param {string} evnt
-     * @param {Function} callback
-     */
-    once(evnt, callback) {
-        this.on(evnt, callback, true);
     }
 
     /**

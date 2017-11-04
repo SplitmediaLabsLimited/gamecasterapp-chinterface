@@ -91,7 +91,7 @@ connected channel.
 
 ```
 // Get all badges for all connected Twitch channels
-Chat.service('twitch').getBadges().then(badges => {
-    console.log('Successfully fetched all channel badges.', badges);
+Chat.service('twitch').getBadges().then(({data}) => {
+    console.log('Successfully fetched all channel badges.', data);
 });
 ```

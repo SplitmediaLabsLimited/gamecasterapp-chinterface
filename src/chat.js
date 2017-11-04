@@ -3,8 +3,8 @@
  */
 
 // @flow
-import Debug from './utils/Debug';
-import * as InterfaceBag from './bags/InterfaceBag';
+import Debug from './utils/debug';
+import * as InterfaceBag from './bags/interfaces';
 import type { Config } from './types';
 
 class Api {

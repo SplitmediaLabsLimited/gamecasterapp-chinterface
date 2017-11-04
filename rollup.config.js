@@ -93,7 +93,7 @@ function getTarget(env, moduleName) {
 }
 
 export default {
-    entry: 'src/Chat.js',
+    entry: 'src/chat.js',
     moduleName: _.capitalize(pkg.name),
     external: Object.keys(pkg.peerDependencies),
     exports: 'default',
@@ -101,7 +101,8 @@ export default {
     plugins,
     globals: {
         '@cvpcasada/tmi.js': 'tmi',
-        'tmi.js': 'tmi'
+        'tmi.js': 'tmi',
+        'axios': 'axios',
     },
     sourceMap: true
 };

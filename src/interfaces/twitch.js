@@ -4,7 +4,7 @@
 
 import tmi from '@cvpcasada/tmi.js';
 import axios from 'axios';
-import Interface from './Interface';
+import Interface from './interface';
 
 class Twitch extends Interface {
     /**
@@ -110,9 +110,7 @@ class Twitch extends Interface {
      * @return {Promise}
      */
     send(message) {
-        const channel = this.getConfig('channel');
-
-        return this._client.say(channel, message);
+        return this._client.say(this.getConfig('channel'), message);
     }
 
     /**
@@ -124,7 +122,10 @@ class Twitch extends Interface {
      * @param {Object} self
      */
     parseMessage({ channel, user, message, self }) {
-        if (user['message-type'] != 'chat') {
+        // TODO: Work out how to get a full user object when TMI execs a say() function.
+        // Currently we just get the message type and emotes list.
+
+        if (user['message-type'] !== 'chat') {
             return;
         }
 
@@ -162,6 +163,7 @@ class Twitch extends Interface {
                 mod: user.mod,
                 turbo: user.turbo,
                 broadcaster: isBroadcaster,
+                emotes,
             },
         });
     }
@@ -241,10 +243,7 @@ class Twitch extends Interface {
         const channel = this.getConfig('channel');
         const userId = this.getConfig('userId');
 
-        if (
-            !channel &&
-            (accessToken === undefined || !accessToken.length)
-        ) {
+        if (accessToken === undefined || !accessToken.length) {
             throw new Error('Cannot fetch Twitch User data. Access token not set.');
         }
 
@@ -254,8 +253,7 @@ class Twitch extends Interface {
             }
 
             this.api('get', 'user')
-                .then(data => {
-                    console.log(data);
+                .then(({data}) => {
                     const channel = data.name || '';
                     const userId = data._id || null;
 
@@ -263,7 +261,7 @@ class Twitch extends Interface {
                         channel,
                         userId,
                     });
-                    
+
                     resolve(channel);
                 })
                 .catch(e => {
