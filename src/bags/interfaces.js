@@ -1,7 +1,8 @@
 /**
- * Interfaces.
+ * Copyright (c) 2017-present, SplitmediaLabs Limited
  *
- * Any Interface exposed through this export will be available.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 import twitch from '../interfaces/twitch';

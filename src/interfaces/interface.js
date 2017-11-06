@@ -1,5 +1,8 @@
 /**
- * Base Interface Class.
+ * Copyright (c) 2017-present, SplitmediaLabs Limited
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 import Helpers from './../utils/helpers';
@@ -20,7 +23,7 @@ class Interface {
      * Connects the Interface to it's data source/starts polling for data.
      */
     connect() {
-        if (this.isConnected()) {
+        if (this.isConnected) {
             return;
         }
     }
@@ -29,7 +32,7 @@ class Interface {
      * Disconnects the Interface from it's data source.
      */
     disconnect() {
-        if (!this.isConnected()) {
+        if (!this.isConnected) {
             return;
         }
     }
@@ -43,7 +46,7 @@ class Interface {
      * @return {Promise}
      */
     send(message) {
-        return new Promise((resolve, reject) => {
+        return new Promise(resolve => {
             resolve();
         });
     }
@@ -55,6 +58,17 @@ class Interface {
      */
     parseMessage(data) {
         //
+    }
+
+    /**
+     * Fetch and set required user data for the Interface.
+     *
+     * @returns {Promise}
+     */
+    getUser() {
+        return new Promise(resolve => {
+            resolve();
+        });
     }
 
     /**
@@ -136,15 +150,6 @@ class Interface {
     }
 
     /**
-     * Set whether the Interface is connected/running a data source.
-     *
-     * @param {boolean} connected
-     */
-    setConnected(connected) {
-        this._connected = connected;
-    }
-
-    /**
      * Name of the Interface.
      *
      * @return {string}
@@ -190,15 +195,6 @@ class Interface {
     }
 
     /**
-     * Returns whether the Interface is connected/running to a data source.
-     *
-     * @return {boolean}
-     */
-    isConnected() {
-        return this._connected;
-    }
-
-    /**
      * Returns whether the Interface should parse Emoticons automatically (if
      * supported).
      *
@@ -206,6 +202,24 @@ class Interface {
      */
     shouldParseEmoticons() {
         return this._parseEmoticons;
+    }
+
+    /**
+     * Returns whether the Interface is connected/running to a data source.
+     *
+     * @return {boolean}
+     */
+    get isConnected() {
+        return this._connected;
+    }
+
+    /**
+     * Set the Interface connection status.
+     *
+     * @param {boolean} [value]
+     */
+    set isConnected(value: boolean) {
+        this._connected = value;
     }
 
 }
