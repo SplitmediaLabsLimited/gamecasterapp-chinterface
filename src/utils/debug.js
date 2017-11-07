@@ -1,17 +1,20 @@
 /**
- * Debug Class.
+ * Copyright (c) 2017-present, SplitmediaLabs Limited
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
-const Constants = require('./../Constants');
-const Helpers = require('./Helpers');
+import * as Constants from '../constants';
+import Helpers from './helpers';
 
 class Debug {
 
     /**
      * Displays a Debug Message to the console.
      *
-     * @param {String} message
-     * @param {String} [type]
+     * @param {string} message
+     * @param {string} [type]
      *
      * @return {void}
      */
@@ -41,4 +44,4 @@ class Debug {
 
 }
 
-module.exports = Debug;
+export default Debug;

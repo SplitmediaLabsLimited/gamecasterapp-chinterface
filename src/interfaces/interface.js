@@ -1,8 +1,11 @@
 /**
- * Base Interface Class.
+ * Copyright (c) 2017-present, SplitmediaLabs Limited
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
-const Helpers = require('./../utils/Helpers');
+import Helpers from './../utils/helpers';
 
 class Interface {
 
@@ -17,19 +20,19 @@ class Interface {
     }
 
     /**
-     * Connects the Interface to it's data source/starts polling for data.
+     * Connects the Interface to its data source/starts polling for data.
      */
     connect() {
-        if (this.isConnected()) {
+        if (this.isConnected) {
             return;
         }
     }
 
     /**
-     * Disconnects the Interface from it's data source.
+     * Disconnects the Interface from its data source.
      */
     disconnect() {
-        if (!this.isConnected()) {
+        if (!this.isConnected) {
             return;
         }
     }
@@ -43,75 +46,65 @@ class Interface {
      * @return {Promise}
      */
     send(message) {
-        return new Promise((resolve, reject) => {
-            resolve();
-        });
+        return Promise.resolve();
     }
 
     /**
      * Parses a message in to the unified format.
      *
-     * @param {Object} data
+     * @param {object} data
      */
     parseMessage(data) {
         //
     }
 
     /**
-     * Listen to the specified Event.
+     * Fetch and set required user data for the Interface.
      *
-     * @param {string|Array} evnt
-     * @param {Function} callback
-     * @param {boolean} [once]
+     * @returns {Promise}
      */
-    on(evnt, callback, once = false) {
-        if (Array.isArray(evnt)) {
-            evnt.forEach(e => this.on(e, callback, once));
-        } else {
-            if (!Array.isArray(this._callbacks[evnt])) {
-                this._callbacks[evnt] = [];
-            }
-
-            this._callbacks[evnt].push({
-                callback,
-                once,
-            });
-        }
+    getUser() {
+        return Promise.resolve();
     }
 
     /**
-     * Shorthand function for listening to a single event once.
+     * Listen to the specified Event.
      *
      * @param {string} evnt
      * @param {Function} callback
      */
-    once(evnt, callback) {
-        this.on(evnt, callback, true);
+    on(evnt, callback) {
+        this._callbacks[evnt] = callback;
     }
 
     /**
      * Emits the given event to any listeners.
      *
      * @param {string} evnt
-     * @param {Object} [data]
+     * @param {object} [data]
      */
     emit(evnt, data = {}) {
-        if (Array.isArray(this._callbacks[evnt]) && this._callbacks[evnt].length) {
-            this._callbacks[evnt].forEach(listener => {
-                listener.callback(data);
+        if (this._callbacks.hasOwnProperty(evnt)) {
+            this._callbacks[evnt](data);
+        }
+    }
 
-                if (listener.once) {
-                    console.log('TODO - Remove ONCE listeners.');
-                }
-            });
+    /**
+     * Deletes a listener event.
+     *
+     * @param {string} evnt
+     */
+    destroy(evnt) {
+        if (this._callbacks.hasOwnProperty(evnt)) {
+            delete this._callbacks[evnt];
         }
     }
 
     /**
      * Sets Config value(s) for the Interface.
      *
-     * @param {string} key
-     * @param {*} [value]
+     * @param {string|object} [key]
+     * @param {string|number|object} [value]
      */
     setConfig(key, value = null) {
         if (Helpers.isObj(key)) {
@@ -121,30 +114,31 @@ class Interface {
         } else {
             this._config[key] = value;
         }
+
+        return this;
     }
 
     /**
-     * Returns the Interface Config.
+     * Returns the Interface Config, specific key value, or default value if not set.
      *
-     * @param {string} [key]
+     * @param {string|null} [key]
+     * @param {*} [dflt]
      *
      * @return {*}
      */
-    getConfig(key = null) {
+    getConfig(key = null, dflt = null) {
         if (key !== null) {
-            return this._config[key];
-        } else {
-            return this._config;
-        }
-    }
+            if (
+                this._config[key] === undefined ||
+                (Helpers.isString(this._config[key]) && !this._config[key].length)
+            ) {
+                return dflt;
+            }
 
-    /**
-     * Set whether the Interface is connected/running a data source.
-     *
-     * @param {boolean} connected
-     */
-    setConnected(connected) {
-        this._connected = connected;
+            return this._config[key];
+        }
+
+        return this._config;
     }
 
     /**
@@ -193,15 +187,6 @@ class Interface {
     }
 
     /**
-     * Returns whether the Interface is connected/running to a data source.
-     *
-     * @return {boolean}
-     */
-    isConnected() {
-        return this._connected;
-    }
-
-    /**
      * Returns whether the Interface should parse Emoticons automatically (if
      * supported).
      *
@@ -211,6 +196,15 @@ class Interface {
         return this._parseEmoticons;
     }
 
+    /**
+     * Returns whether the Interface is connected/running to a data source.
+     *
+     * @return {boolean}
+     */
+    get isConnected() {
+        return this._connected;
+    }
+
 }
 
-module.exports = Interface;
+export default Interface;

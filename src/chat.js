@@ -1,18 +1,18 @@
 /**
- * Library Entry Point.
+ * Copyright (c) 2017-present, SplitmediaLabs Limited
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
-const Debug = require('./utils/Debug');
-const InterfaceBag = require('./bags/InterfaceBag');
+// @flow
+import Debug from './utils/debug';
+import * as Interfaces from './bags/interfaces';
+import type { Config } from './types';
 
-class Api {
+class Chat {
 
-    /**
-     * Initialize the Chinterface Instance.
-     */
-    constructor() {
-        this._debug = false;
-    }
+    _debug = false;
 
     /**
      * Returns the Interface for the given service.
@@ -21,9 +21,9 @@ class Api {
      *
      * @return {*}
      */
-    service(service) {
+    service(service: string) {
         if (this.exists(service)) {
-            return InterfaceBag[service];
+            return Interfaces[service];
         } else {
             Debug.log(`The requested service "${service}" does not exist.`);
 
@@ -35,11 +35,11 @@ class Api {
      * Sets the Config for the given service.
      *
      * @param {string} service
-     * @param {Object} config
+     * @param {object} config
      */
-    setConfig(service, config) {
+    setConfig(service: string, config: {}) {
         if (this.exists(service)) {
-            InterfaceBag[service].setConfig(config);
+            Interfaces[service].setConfig(config);
 
             return this.service(service);
         } else {
@@ -56,25 +56,25 @@ class Api {
      *
      * @return {boolean}
      */
-    exists(service) {
-        return Object.keys(InterfaceBag).indexOf(service) !== -1;
+    exists(service: string) {
+        return Object.keys(Interfaces).indexOf(service) !== -1;
     }
 
     /**
-     * Sets whether APInterface is in Debug mode.
+     * Sets whether Chinterface is in Debug mode.
      *
      * @param {boolean} debug
      *
      * @return {boolean}
      */
-    setDebug(debug) {
+    setDebug(debug: boolean) {
         this._debug = debug;
 
         return this.isDebug();
     }
 
     /**
-     * Returns whether APInterface is in Debug mode.
+     * Returns whether Chinterface is in Debug mode.
      *
      * @return {boolean}
      */
@@ -84,4 +84,4 @@ class Api {
 
 }
 
-module.exports = new Api;
+export default new Chat();
