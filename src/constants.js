@@ -5,9 +5,5 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-const Constants = {
-    LOG_INFO: 'LOG_INFO',
-    LOG_ERROR: 'LOG_ERROR',
-};
-
-export default Constants;
+export const LOG_INFO = 'LOG_INFO';
+export const LOG_ERROR = 'LOG_ERROR';

@@ -20,7 +20,7 @@ class Interface {
     }
 
     /**
-     * Connects the Interface to it's data source/starts polling for data.
+     * Connects the Interface to its data source/starts polling for data.
      */
     connect() {
         if (this.isConnected) {
@@ -29,7 +29,7 @@ class Interface {
     }
 
     /**
-     * Disconnects the Interface from it's data source.
+     * Disconnects the Interface from its data source.
      */
     disconnect() {
         if (!this.isConnected) {
@@ -46,15 +46,13 @@ class Interface {
      * @return {Promise}
      */
     send(message) {
-        return new Promise(resolve => {
-            resolve();
-        });
+        return Promise.resolve();
     }
 
     /**
      * Parses a message in to the unified format.
      *
-     * @param {Object} data
+     * @param {object} data
      */
     parseMessage(data) {
         //
@@ -66,52 +64,38 @@ class Interface {
      * @returns {Promise}
      */
     getUser() {
-        return new Promise(resolve => {
-            resolve();
-        });
+        return Promise.resolve();
     }
 
     /**
      * Listen to the specified Event.
      *
-     * @param {string|Array} evnt
+     * @param {string} evnt
      * @param {Function} callback
      */
     on(evnt, callback) {
-        if (Array.isArray(evnt)) {
-            evnt.forEach(e => this.on(e, callback));
-        } else {
-            if (!Array.isArray(this._callbacks[evnt])) {
-                this._callbacks[evnt] = [];
-            }
-
-            this._callbacks[evnt].push({
-                callback
-            });
-        }
+        this._callbacks[evnt] = callback;
     }
 
     /**
      * Emits the given event to any listeners.
      *
      * @param {string} evnt
-     * @param {Object} [data]
+     * @param {object} [data]
      */
     emit(evnt, data = {}) {
-        if (Array.isArray(this._callbacks[evnt]) && this._callbacks[evnt].length) {
-            this._callbacks[evnt].forEach(listener => {
-                listener.callback(data);
-            });
+        if (this._callbacks.hasOwnProperty(evnt)) {
+            this._callbacks[evnt](data);
         }
     }
 
     /**
      * Deletes a listener event.
      *
-     * @param {String} evnt
+     * @param {string} evnt
      */
     destroy(evnt) {
-        if (Array.isArray(this._callbacks[evnt]) && this._callbacks[evnt].length) {
+        if (this._callbacks.hasOwnProperty(evnt)) {
             delete this._callbacks[evnt];
         }
     }
@@ -119,8 +103,8 @@ class Interface {
     /**
      * Sets Config value(s) for the Interface.
      *
-     * @param {*} [key]
-     * @param {*} [value]
+     * @param {string|object} [key]
+     * @param {string|number|object} [value]
      */
     setConfig(key, value = null) {
         if (Helpers.isObj(key)) {
@@ -135,14 +119,22 @@ class Interface {
     }
 
     /**
-     * Returns the Interface Config.
+     * Returns the Interface Config, specific key value, or default value if not set.
      *
-     * @param {string} [key]
+     * @param {string|null} [key]
+     * @param {*} [dflt]
      *
      * @return {*}
      */
-    getConfig(key = null) {
+    getConfig(key = null, dflt = null) {
         if (key !== null) {
+            if (
+                this._config[key] === undefined ||
+                (Helpers.isString(this._config[key]) && !this._config[key].length)
+            ) {
+                return dflt;
+            }
+
             return this._config[key];
         }
 
@@ -211,15 +203,6 @@ class Interface {
      */
     get isConnected() {
         return this._connected;
-    }
-
-    /**
-     * Set the Interface connection status.
-     *
-     * @param {boolean} [value]
-     */
-    set isConnected(value: boolean) {
-        this._connected = value;
     }
 
 }

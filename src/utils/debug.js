@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import Constants from '../constants';
+import * as Constants from '../constants';
 import Helpers from './helpers';
 
 class Debug {
@@ -13,8 +13,8 @@ class Debug {
     /**
      * Displays a Debug Message to the console.
      *
-     * @param {String} message
-     * @param {String} [type]
+     * @param {string} message
+     * @param {string} [type]
      *
      * @return {void}
      */

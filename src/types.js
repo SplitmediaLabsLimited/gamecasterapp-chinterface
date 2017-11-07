@@ -7,10 +7,10 @@
 
 // @flow
 export type Config = {
-    channel: ?Array<string> | ?string,
-    username: ?Array<string>,
+    channel: ?string,
+    username: ?string,
     debug: ?boolean,
-    clientId: ?string,
+    clientId: string,
     accessToken: ?string,
     userId: ?number,
     reconnect: ?boolean,

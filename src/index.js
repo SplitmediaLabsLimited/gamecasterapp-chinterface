@@ -5,6 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import Chat from './Chat';
+import Chat from './chat';
 
 export default Chat;

@@ -20,7 +20,7 @@ class Twitch extends Interface {
     }
 
     /**
-     * Connects the Interface to it's data source/starts polling for data.
+     * Connects the Interface to its data source/starts polling for data.
      *
      * @return {Promise}
      */
@@ -31,18 +31,12 @@ class Twitch extends Interface {
             const clientId = this.getConfig('clientId');
             let channel = this.getConfig('channel');
 
-            if (
-                (clientId !== undefined && clientId.length) &&
-                (channel !== undefined && channel.length)
-            ) {
+            if (clientId && channel) {
                 const username = this.getConfig('username');
                 const accessToken = this.getConfig('accessToken');
                 let identity = {};
 
-                if (
-                    username !== undefined && username.length &&
-                    accessToken !== undefined && accessToken.length
-                ) {
+                if (username && accessToken) {
                     identity = {
                         username,
                         password: accessToken,
@@ -57,7 +51,7 @@ class Twitch extends Interface {
                         debug: false,
                     },
                     connection: {
-                        reconnect: this.getConfig('reconnect') || true,
+                        reconnect: this.getConfig('reconnect', true),
                         secure: true,
                     },
                 });
@@ -71,19 +65,19 @@ class Twitch extends Interface {
                     });
                 });
                 this._client.on('join', () => {
-                    this.isConnected = true;
+                    this._connected = true;
                     resolve();
                 });
 
                 this._client.connect();
             } else {
-                reject('No ClientID or channel specified.');
+                reject(new Error('ClientID or channel not specified.'));
             }
         });
     }
 
     /**
-     * Disconnects the Interface from it's data source.
+     * Disconnects the Interface from its data source.
      */
     disconnect() {
         super.disconnect();
@@ -101,16 +95,20 @@ class Twitch extends Interface {
      * @return {Promise}
      */
     send(message) {
-        return this._client.say(this.getConfig('channel'), message);
+        return new Promise((resolve, reject) => {
+            this._client.say(this.getConfig('channel'), message)
+                .then(() => resolve())
+                .catch(e => reject(new Error(e)));
+        });
     }
 
     /**
      * Parses a message in to the unified format.
      *
-     * @param {String} channel
-     * @param {String} user
-     * @param {String} message
-     * @param {Boolean} self
+     * @param {string} channel
+     * @param {string} user
+     * @param {string} message
+     * @param {boolean} self
      */
     parseMessage({ channel, user, message, self }) {
         const rawMessage = message;
@@ -154,7 +152,7 @@ class Twitch extends Interface {
 
     /**
      * @param {string} message
-     * @param {Object} rawEmotes
+     * @param {object} rawEmotes
      *
      * @return {string}
      */
@@ -211,7 +209,7 @@ class Twitch extends Interface {
         const userId = this.getConfig('userId');
 
         if (!userId) {
-            throw new Error('User ID is not set.');
+            return Promise.reject(new Error('User ID is not set.'));
         }
 
         return new Promise((resolve, reject) => {
@@ -233,28 +231,16 @@ class Twitch extends Interface {
     getUser() {
         const accessToken = this.getConfig('accessToken');
 
-        if (accessToken === undefined || !accessToken.length) {
-            throw new Error('Access token not set.');
+        if (!accessToken) {
+            return Promise.reject(new Error('Access token not set.'));
         }
 
         return new Promise((resolve, reject) => {
             this.api('get', 'user')
                 .then(({data}) => {
-                    let channel = this.getConfig('channel');
-                    let username = this.getConfig('username');
-                    let userId = this.getConfig('userId');
-
-                    if (channel === undefined || !channel.length) {
-                        channel = data.name || '';
-                    }
-
-                    if (username === undefined || !username.length) {
-                        username = data.name || '';
-                    }
-
-                    if (userId === undefined || !userId) {
-                        userId = parseInt(data._id) || null;
-                    }
+                    const channel = this.getConfig('channel', data.name);
+                    const username = this.getConfig('username', data.name);
+                    const userId = this.getConfig('userId', parseInt(data._id));
 
                     this.setConfig({
                         channel,
@@ -273,8 +259,8 @@ class Twitch extends Interface {
     /**
      * Sets Config value(s) for the Interface.
      *
-     * @param {*} [key]
-     * @param {*} [value]
+     * @param {string|object} [key]
+     * @param {string|number|object} [value]
      */
     setConfig(key, value = null) {
         super.setConfig(key, value);
@@ -347,7 +333,7 @@ class Twitch extends Interface {
      * Pass-through function to listen to any supported event in TMI.
      * https://docs.tmijs.org/v1.2.1/Events.html
      *
-     * @param {String} evnt
+     * @param {string} evnt
      * @param {*}      callback
      *
      * @returns {Twitch}
@@ -361,17 +347,17 @@ class Twitch extends Interface {
     /**
      * Query the Twitch API for a given method, endpoint and query param.
      *
-     * @param {String} method
-     * @param {String} url
-     * @param {Object} data
+     * @param {string} method
+     * @param {string} url
+     * @param {object} data
      *
      * @return {Promise}
      */
     api(method, url, data = {}) {
         const clientId = this.getConfig('clientId');
 
-        if (clientId === undefined || !clientId.length) {
-            throw new Error('Client ID not set.');
+        if (!clientId) {
+            return Promise.reject(new Error('Client ID not set.'));
         }
 
         return this._http.request({
