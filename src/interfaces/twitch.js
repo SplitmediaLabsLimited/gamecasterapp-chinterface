@@ -56,14 +56,7 @@ class Twitch extends Interface {
                     },
                 });
 
-                this._client.on('chat', (channel, user, message, self) => {
-                    this.parseMessage({
-                        channel,
-                        user,
-                        message,
-                        self,
-                    });
-                });
+
                 this._client.on('join', () => {
                     this._connected = true;
                     resolve();
@@ -84,6 +77,7 @@ class Twitch extends Interface {
 
         this._client.disconnect();
         this._client = null;
+        this._connected = false;
     }
 
     /**
@@ -100,6 +94,39 @@ class Twitch extends Interface {
                 .then(() => resolve())
                 .catch(e => reject(new Error(e)));
         });
+    }
+
+    /**
+     * Listen to the specified Event.
+     *
+     * @param {string} evnt
+     * @param {Function} callback
+     */
+    on(evnt, callback) {
+        super.on(evnt, callback);
+
+        if (
+            this._client !== null &&
+            evnt === 'message'
+        ) {
+            this._client.on('chat', this.msgEvnt.bind(this));
+        }
+    }
+
+    /**
+     * Deletes a listener event.
+     *
+     * @param {string} evnt
+     */
+    destroy(evnt) {
+        super.destroy(evnt);
+
+        if (
+            this._client !== null &&
+            evnt === 'message'
+        ) {
+            this._client.removeListener('chat', this.msgEvnt.bind(this));
+        }
     }
 
     /**
@@ -123,6 +150,7 @@ class Twitch extends Interface {
         }
 
         if (
+            user.badges !== null &&
             Object.keys(user.badges).indexOf('broadcaster') !== -1 &&
             user.badges.broadcaster == '1'
         ) {
@@ -364,6 +392,23 @@ class Twitch extends Interface {
             method,
             url,
             data,
+        });
+    }
+
+    /**
+     * Message event handler.
+     *
+     * @param {string}  channel
+     * @param {object}  user
+     * @param {string}  message
+     * @param {boolean} self
+     */
+    msgEvnt(channel, user, message, self) {
+        this.parseMessage({
+            channel,
+            user,
+            message,
+            self,
         });
     }
 }

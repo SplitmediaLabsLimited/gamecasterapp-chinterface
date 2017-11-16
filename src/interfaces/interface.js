@@ -95,9 +95,7 @@ class Interface {
      * @param {string} evnt
      */
     destroy(evnt) {
-        if (this._callbacks.hasOwnProperty(evnt)) {
-            delete this._callbacks[evnt];
-        }
+        delete this._callbacks[evnt];
     }
 
     /**
