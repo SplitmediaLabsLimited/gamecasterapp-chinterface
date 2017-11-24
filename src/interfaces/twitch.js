@@ -165,7 +165,7 @@ class Twitch extends Interface {
             username: user['display-name'] || user.username,
             body: message,
             raw: rawMessage,
-            timestamp: user['sent-ts'] ? parseInt(user['sent-ts']) : new Date().getTime(),
+            timestamp: user['tmi-sent-ts'] ? parseInt(user['tmi-sent-ts']) : new Date().getTime(),
             extra: {
                 colour: user.color,
                 badges: user.badges || {},
