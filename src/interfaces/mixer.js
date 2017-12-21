@@ -81,8 +81,6 @@ class Mixer extends Interface {
    */
   send(message) {
     if (typeof message === 'string') {
-      console.warn('went')
-      console.warn(this.isConnected)
       if (!this.isConnected) {
         this.emit('logs', 'Unable to send message. No Connection to Websocket');
         return;
