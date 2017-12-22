@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import tmi from '@cvpcasada/tmi.js';
 import axios from 'axios';
 import Interface from './interface';
 
@@ -71,7 +70,10 @@ class Mixer extends Interface {
   disconnect() {
     if (this.isConnected) {
       this.ws.close();
+      return;
     }
+
+    this.emit('disconnected');
   }
 
   /**
@@ -220,14 +222,25 @@ class Mixer extends Interface {
 
     this.ws.addEventListener('message', this.msgEvent.bind(this))
 
-    this.ws.addEventListener('error', () => this.ws.close())
+    this.ws.addEventListener('error', () => {
+      this._allowSend = false;
+
+      this.ws.removeEventListener('message', this.msgEvent.bind(this));
+
+      if (this.shouldReconnect) {
+        const url = this.connectToWs();
+        this.emit('logs', `Reconnecting to Websocket using: ${url}`);
+        return;
+      }
+
+      this.ws.close();
+    });
 
     this.ws.addEventListener('close', () => {
       this._allowSend = false;
 
-      this.ws.removeEventListener('message', this.msgEvent.bind(this))
-      const url = this.connectToWs();
-      this.emit('logs', `Reconnecting to Websocket using: ${url}`);
+      this.ws.removeEventListener('message', this.msgEvent.bind(this));
+      this.emit('disconnected');
     })
   }
 
@@ -321,6 +334,15 @@ class Mixer extends Interface {
         break;
       default:
     }
+  }
+
+  /**
+   * Returns current reconnect configuration
+   *
+   * return {boolean}
+   */
+  get shouldReconnect() {
+    return !!+this.getConfig('reconnect');
   }
 
   /**
