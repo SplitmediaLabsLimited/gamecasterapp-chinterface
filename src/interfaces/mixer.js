@@ -110,19 +110,27 @@ class Mixer extends Interface {
    * return {array}
    */
   parseEmoticon(message) {
-    let img = document.createElement('img');
+    let span = document.createElement('span');
 
-    return message.map(item => {
-      if (item.type === 'emoticon') {
-        img.src = '';
-        img.alt = item.text;
-        img.classList.add(item.type);
+    return message
+      .map(item => {
+        if (item.type === 'emoticon') {
+          span.style.backgroundImage = `url(https://mixer.com/_latest/assets/emoticons/${item.pack}.png)`;
+          span.style.backgroundRepeat = 'no-repeat';
+          span.style.verticalAlign = 'baseline';
+          span.style.display = 'inline-block';
+          span.style.height = item.coords.height + 'px';
+          span.style.width = item.coords.width + 'px';
+          span.style.backgroundPositionX = (item.coords.x * -1) + 'px';
+          span.style.backgroundPositionY = (item.coords.y * -1) + 'px';
+          span.alt = item.text;
+          span.classList.add(item.type);
 
-        item.text = img.outerHTML;
-      }
+          item.text = span.outerHTML;
+        }
 
-      return item;
-    })
+        return item;
+      })
   }
 
   /**
@@ -133,17 +141,18 @@ class Mixer extends Interface {
   parseUrl(message) {
     let link = document.createElement('a');
 
-    return message.map(item => {
-      if (item.type === 'link') {
-        link.href = item.url;
-        link.textContent = item.text;
-        link.classList.add(item.type);
+    return message
+      .map(item => {
+        if (item.type === 'link') {
+          link.href = item.url;
+          link.textContent = item.text;
+          link.classList.add(item.type);
 
-        item.text = link.outerHTML;
-      }
+          item.text = link.outerHTML;
+        }
 
-      return item;
-    })
+        return item;
+      })
   }
 
   /**
@@ -152,33 +161,33 @@ class Mixer extends Interface {
    * @param {object}
    */
   parseMessage({ data }) {
-    const rawMessage = data.message.message,
-          {
+    const {
             id,
             user_roles,
             user_level,
             user_id,
             user_avatar,
-            user_name : username
+            message,
+            user_name : username,
           } = data;
 
-    let message = rawMessage;
+    let body = JSON.parse(JSON.stringify(message.message));
 
     if (this.shouldParseEmoticons) {
-      message = this.parseEmoticon(message);
+      body = this.parseEmoticon(body);
     }
 
     if (this.shouldParseUrl) {
-      message = this.parseUrl(message);
+      body = this.parseUrl(body);
     }
 
-    message = message.reduce((text, item) => `${text}${item.text}`, '');
+    body = body.reduce((text, item) => `${text}${item.text}`, '');
 
     this.emit('message', {
       username,
       id,
-      body: message,
-      raw: rawMessage,
+      body,
+      raw: message.message,
       extra: {
         user_roles,
         user_level,
