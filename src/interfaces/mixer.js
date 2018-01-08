@@ -21,6 +21,12 @@ class Mixer extends Interface {
     });
 
     this._allowSend = false;
+
+    this.setConfig({
+      parseEmoticon: true,
+      parseUrl: true,
+      reconnect: true
+    });
   }
 
   /**
@@ -36,12 +42,12 @@ class Mixer extends Interface {
         reject(new Error('Username not specified.'));
       }
 
-      this.api('get', `channels/${username}?fields=id`)
+      this.api('get', `channels/${username}?fields=id,userId`)
           .then(({ data }) => {
 
-            const { id : channelId } = data;
+            const { id : channelId, userId } = data;
 
-            this.setConfig({ channelId });
+            this.setConfig({ channelId, userId });
 
             this.api('get', `chats/${channelId}`)
               .then(({ data }) => {
@@ -50,15 +56,16 @@ class Mixer extends Interface {
 
                 this.endpoints = endpoints.entries();
 
-                const url = this.connectToWs();
+                const url = this.connectToWs(resolve);
+
                 this.emit('logs', `Connecting to Websocket using: ${url}`)
               })
               .catch(e => {
-                reject(new Error(e))
+                reject(new Error(e));
               })
           })
           .catch(e => {
-            reject(new Error(e))
+            reject(new Error(e));
           });
 
     })
@@ -204,7 +211,7 @@ class Mixer extends Interface {
    *
    * @param {string} url
    */
-  createWsInstance(url) {
+  createWsInstance(resolve, url) {
     this.ws = new WebSocket(url);
 
     const args = [this.getConfig('channelId')],
@@ -217,7 +224,11 @@ class Mixer extends Interface {
     }
 
     this.ws.addEventListener('open', data => {
+      this._connected = true;
+
       this.send({ method: 'auth', arguments: args });
+
+      resolve();
     })
 
     this.ws.addEventListener('message', this.msgEvent.bind(this))
@@ -225,10 +236,12 @@ class Mixer extends Interface {
     this.ws.addEventListener('error', () => {
       this._allowSend = false;
 
+      this.emit('message-sending', false);
+
       this.ws.removeEventListener('message', this.msgEvent.bind(this));
 
       if (this.shouldReconnect) {
-        const url = this.connectToWs();
+        const url = this.connectToWs(resolve);
         this.emit('logs', `Reconnecting to Websocket using: ${url}`);
         return;
       }
@@ -240,14 +253,15 @@ class Mixer extends Interface {
       this._allowSend = false;
 
       this.ws.removeEventListener('message', this.msgEvent.bind(this));
+      this.emit('message-sending', false);
       this.emit('disconnected');
-    })
+    });
   }
 
   /**
    * Handles connection and reconnection of WebSocket
    */
-  connectToWs() {
+  connectToWs(resolve) {
     const item = this.endpoints.next();
 
     if (item.done) {
@@ -258,7 +272,7 @@ class Mixer extends Interface {
 
     const url = item.value.pop();
 
-    this.createWsInstance(url);
+    this.createWsInstance(resolve, url);
 
     return url;
   }
@@ -289,9 +303,9 @@ class Mixer extends Interface {
     data = JSON.parse(data);
 
     if (data.data && data.data.authenticated !== undefined) {
-      this._connected = true;
       this._allowSend = data.data.authenticated;
-      this.emit('ready');
+
+      this.emit('message-sending', true);
       return;
     }
 

@@ -105,3 +105,114 @@ Chat.service('twitch').getBadges().then(data => {
     console.log('Successfully fetched all channel badges.', data);
 });
 ```
+
+## Mixer
+
+### Setup
+```js
+// Mixer.
+Chat.service('mixer').setConfig({
+    username: 'oyed', // Mixer username/channel
+    reconnect: false, // Defaults to true
+    parseEmoticon: false, // Defaults to true
+    parseUrl: false, // Defaults to true
+    // Optional, required for sending/writing messages.
+    authKey: 'as545trdsFdgghNXoyit83nguf11gpOx',
+});
+```
+
+### Usage
+
+#### Message Events
+```js
+// Message receiver
+Chat.service('mixer').on('message', data => {
+    /**
+     * `data` will always return the following structure:
+     *
+     * {string} username
+     * {string} body - The processed message, with <img> tags for emotes.
+     * {string} raw - The unprocessed message, direct from the service.
+     * {number} id - Message Id
+     * {Object} extra - User information.
+     */
+    console.log('New Message', data);
+});
+
+// Optional: Event to check if sending is enabled/disabled
+Chat.service('mixer').on('message-sending', bool => {
+    if (bool) {
+        console.log('Sending is enabled ');
+        return;
+    }
+
+    console.log('Sending is disabled ');
+});
+
+// Send Message
+Chat.service('mixer').send('Sample Message');
+
+// Connect to Mixer
+Chat.service('mixer').connect().then(() => {
+   console.log('Connected to Mixer WebSocket server');
+}).catch(() => {
+   console.log('Could not connect to Mixer Websocket server') 
+});
+
+// Called on chat disconnection
+Chat.service('mixer').on('disconnected', () => {
+    console.log('Disconnected to Mixer');
+});
+
+// Disconnect to Mixer
+Chat.service('mixer').disconnect();
+
+// Clear Messages
+Chat.service('mixer').on('message-clear', () => {
+    console.log('Clear Messages');
+});
+
+// Delete Message
+Chat.service('mixer').on('message-delete', id => {
+    console.log('Delete message with id: ' + id);
+});
+```
+
+#### Viewers Events
+
+```js
+// User join
+Chat.service('mixer').on('user-join', data => {
+    /**
+     * `data` will always return the following structure:
+     *
+     * {number} id - User Id
+     * {string} username
+     * {array} roles - User roles
+     */
+    console.log('User join: ', data);
+});
+
+// User leave
+Chat.service('mixer').on('user-leave', data => {
+    /**
+     * `data` will always return the following structure:
+     *
+     * {number} id - User Id
+     * {string} username
+     */
+    console.log('User leave: ', data);
+});
+
+// User update
+Chat.service('mixer').on('user-update', data => {
+    /**
+     * `data` will always return the following structure:
+     *
+     * {number} id - User Id
+     * {string} username
+     * {array} roles - User roles
+     */
+    console.log('User update: ', data);
+});
+```
