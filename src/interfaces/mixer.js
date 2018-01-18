@@ -144,8 +144,8 @@ class Mixer extends Interface {
 
   /**
    * Parses Links
-   * @param  {[type]} message [description]
-   * @return {[type]}         [description]
+   *
+   * return {array}
    */
   parseUrl(message) {
     let link = document.createElement('a');
