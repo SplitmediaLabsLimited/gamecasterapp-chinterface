@@ -7,8 +7,10 @@
 
 import twitch from '../interfaces/twitch';
 import mixer from '../interfaces/mixer';
+import youtube from '../interfaces/youtube';
 
 export {
     twitch,
     mixer,
+    youtube,
 };
