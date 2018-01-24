@@ -11,7 +11,8 @@ import Interface from './interface';
 class Youtube extends Interface {
 
   messagesId = [];
-  interval = false;
+  interval;
+
   /**
    * Initialize the Interface.
    */
@@ -24,6 +25,11 @@ class Youtube extends Interface {
     });
   }
 
+  /**
+   * Creates the initial message request
+   *
+   * @return {Promise}
+   */
   connect() {
     super.connect();
 
@@ -33,6 +39,9 @@ class Youtube extends Interface {
       });
   }
 
+  /**
+   * Stops the polling request
+   */
   disconnect() {
     super.disconnect();
 
@@ -41,6 +50,11 @@ class Youtube extends Interface {
     this.emit('disconnected');
   }
 
+  /**
+   * Send message to the specified live chat id
+   *
+   * @return {Promise}
+   */
   send(message) {
     const liveChatId = this.getConfig('liveChatId');
 
@@ -58,15 +72,21 @@ class Youtube extends Interface {
     });
   }
 
-  fetchMessage() {
+  /**
+   * Fetch current available messages
+   *
+   * @return {Promise}
+   */
+  fetchMessage(token = '') {
     const liveChatId = this.getConfig('liveChatId'),
-          maxResults = this.getConfig('maxResults');
+          maxResults = this.getConfig('maxResults'),
+          tokenParam = token ? `&pageToken=${token}` : '';
 
     return new Promise((resolve, reject) => {
-      this.api('get', `?part=snippet,authorDetails&liveChatId=${liveChatId}&maxResults=${maxResults}`)
+      this.api('get', `?part=snippet,authorDetails&liveChatId=${liveChatId}&maxResults=${maxResults}${tokenParam}`)
         .then(({ data }) => {
 
-          const { items, pollingIntervalMillis } = data;
+          const { items, nextPageToken, pollingIntervalMillis } = data;
 
           this.handleMessages(items);
 
@@ -78,7 +98,7 @@ class Youtube extends Interface {
           this.interval = setTimeout(
             () => {
               if (this._connected) {
-                this.fetchMessage()
+                this.fetchMessage(nextPageToken)
               }
             },
             interval
@@ -96,14 +116,20 @@ class Youtube extends Interface {
     })
   }
 
+  /**
+   * Parses a message in to the unified format.
+   *
+   * @param {object}
+   */
   handleMessages(list) {
     const maxResults = this.getConfig('maxResults');
 
     list
-      .filter(({ id }) => {
-        return !this.messagesId.includes(id)
-      })
       .forEach(({ id, snippet, authorDetails }) => {
+
+        if (this.messagesId.includes(id)) {
+          return;
+        }
 
         this.messagesId.push(id);
 
@@ -144,6 +170,12 @@ class Youtube extends Interface {
       })
   }
 
+
+  /**
+   * Parses Links
+   *
+   * return {string}
+   */
   parseUrl (message) {
     const regex = new RegExp(/https?:\/\/\S+/ig),
           link = document.createElement('a');
