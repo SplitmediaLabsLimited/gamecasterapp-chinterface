@@ -6,7 +6,9 @@
  */
 
 import twitch from '../interfaces/twitch';
+import mixer from '../interfaces/mixer';
 
 export {
     twitch,
+    mixer,
 };

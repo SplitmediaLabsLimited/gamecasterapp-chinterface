@@ -13,10 +13,15 @@ class Interface {
      * Initialize the Interface.
      */
     constructor() {
-        this._config = {};
-        this._callbacks = {};
-        this._connected = false;
-        this._parseEmoticons = true;
+        this.config = {};
+        this.callbacks = {};
+        this.connected = false;
+
+        this.reconnectCurrentInterval = 1000; // 1s [default]
+        this.reconnectDefaultInterval = 1000; // 1s [default]
+        this.reconnectMultiplier = 1.8; // 1.8s [reconnect interval increment]
+        this.reconnectMaxInterval = 60000; // 60s [max. retry time]
+        this.reconnectAttempt = 0;
     }
 
     /**
@@ -63,7 +68,7 @@ class Interface {
      *
      * @returns {Promise}
      */
-    getUser() {
+    loadUser() {
         return Promise.resolve();
     }
 
@@ -74,7 +79,7 @@ class Interface {
      * @param {Function} callback
      */
     on(evnt, callback) {
-        this._callbacks[evnt] = callback;
+        this.callbacks[evnt] = callback;
     }
 
     /**
@@ -84,8 +89,8 @@ class Interface {
      * @param {object} [data]
      */
     emit(evnt, data = {}) {
-        if (this._callbacks.hasOwnProperty(evnt)) {
-            this._callbacks[evnt](data);
+        if (this.callbacks.hasOwnProperty(evnt)) {
+            this.callbacks[evnt](data);
         }
     }
 
@@ -95,7 +100,7 @@ class Interface {
      * @param {string} evnt
      */
     destroy(evnt) {
-        delete this._callbacks[evnt];
+        delete this.callbacks[evnt];
     }
 
     /**
@@ -104,13 +109,13 @@ class Interface {
      * @param {string|object} [key]
      * @param {string|number|object} [value]
      */
-    setConfig(key, value = null) {
+    async setConfig(key, value = null) {
         if (Helpers.isObj(key)) {
             Object.keys(key).forEach(k => {
                 this.setConfig(k, key[k]);
             });
         } else {
-            this._config[key] = value;
+            this.config[key] = value;
         }
 
         return this;
@@ -127,16 +132,16 @@ class Interface {
     getConfig(key = null, dflt = null) {
         if (key !== null) {
             if (
-                this._config[key] === undefined ||
-                (Helpers.isString(this._config[key]) && !this._config[key].length)
+                this.config[key] === undefined ||
+                (Helpers.isString(this.config[key]) && !this.config[key].length)
             ) {
                 return dflt;
             }
 
-            return this._config[key];
+            return this.config[key];
         }
 
-        return this._config;
+        return this.config;
     }
 
     /**
@@ -185,13 +190,30 @@ class Interface {
     }
 
     /**
-     * Returns whether the Interface should parse Emoticons automatically (if
-     * supported).
+     * Returns current emoticon parsing configuration
      *
-     * @returns {boolean}
+     * @return {boolean}
      */
-    shouldParseEmoticons() {
-        return this._parseEmoticons;
+    get shouldParseEmoticons() {
+        return this.getConfig('parseEmoticon');
+    }
+
+    /**
+     * Returns current url parsing configuration
+     *
+     * @return {boolean}
+     */
+    get shouldParseUrl() {
+        return this.getConfig('parseUrl');
+    }
+
+    /**
+     * Returns current reconnect configuration
+     *
+     * @return {boolean}
+     */
+    get shouldReconnect() {
+        return this.getConfig('reconnect');
     }
 
     /**
@@ -200,9 +222,29 @@ class Interface {
      * @return {boolean}
      */
     get isConnected() {
-        return this._connected;
+        return this.connected;
     }
 
+    /**
+     * Increase reconnect interval properties.
+     */
+    increaseReconnect() {
+        if (this.reconnectCurrentInterval >= this.reconnectMaxInterval) {
+            this.reconnectCurrentInterval = this.reconnectMaxInterval;
+        } else {
+            this.reconnectCurrentInterval = this.reconnectCurrentInterval * this.reconnectMultiplier;
+        }
+
+        this.reconnectAttempt++;
+    }
+
+    /**
+     * Reset reconnect interval properties.
+     */
+    resetReconnect() {
+        this.reconnectCurrentInterval = this.reconnectDefaultInterval;
+        this.reconnectAttempt = 0;
+    }
 }
 
 export default Interface;
