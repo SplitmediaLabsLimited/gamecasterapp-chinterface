@@ -50,7 +50,7 @@ const plugins = [
             [
                 'env',
                 {
-                    targets: { browsers: ['last 2 versions', 'ie 11'], node: '6.10' },
+                    targets: { browsers: ['last 2 versions', 'ie 11'], node: '8.9' },
                     modules: false,
                     loose: true
                 }
@@ -60,7 +60,18 @@ const plugins = [
             'transform-flow-strip-types',
             'external-helpers',
             'transform-object-rest-spread',
-            'transform-class-properties'
+            'transform-class-properties',
+            ['transform-runtime', {
+                helpers: false,
+                polyfill: false,
+                regenerator: true
+            }],
+            [
+                "transform-regenerator",
+                {
+                    "async": false,
+                },
+            ]
         ]
     }),
 
@@ -102,7 +113,7 @@ export default {
     globals: {
         '@cvpcasada/tmi.js': 'tmi',
         'tmi.js': 'tmi',
-        'axios': 'axios',
+        'axios': 'axios'
     },
     sourceMap: true
 };

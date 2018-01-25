@@ -17,6 +17,12 @@ class Twitch extends Interface {
         super();
 
         this._client = null;
+
+        this.setConfig({
+            parseEmoticon: true,
+            reconnect: true,
+            formatMessages: true,
+        });
     }
 
     /**
@@ -29,7 +35,7 @@ class Twitch extends Interface {
 
         return new Promise((resolve, reject) => {
             const clientId = this.getConfig('clientId');
-            let channel = this.getConfig('channel');
+            const channel = this.getConfig('channel');
 
             if (clientId && channel) {
                 const username = this.getConfig('username');
@@ -51,14 +57,15 @@ class Twitch extends Interface {
                         debug: false,
                     },
                     connection: {
-                        reconnect: this.getConfig('reconnect', true),
+                        reconnect: this.shouldReconnect,
                         secure: true,
                     },
                 });
 
 
-                this._client.on('join', () => {
+                this._client.on('connected', () => {
                     this._connected = true;
+                    this.emit('connected');
                     resolve();
                 });
 
@@ -88,12 +95,8 @@ class Twitch extends Interface {
      *
      * @return {Promise}
      */
-    send(message) {
-        return new Promise((resolve, reject) => {
-            this._client.say(this.getConfig('channel'), message)
-                .then(() => resolve())
-                .catch(e => reject(new Error(e)));
-        });
+    async send(message) {
+        return await this._client.say(this.getConfig('channel'), message);
     }
 
     /**
@@ -138,9 +141,10 @@ class Twitch extends Interface {
      * @param {boolean} self
      */
     parseMessage({ channel, user, message, self }) {
-        const rawMessage = message;
+        const formatMessages = this.getConfig('formatMessages');
         let isBroadcaster = false;
         let emotes = null;
+        let body = null;
 
         if (
             user.emotes !== null &&
@@ -157,14 +161,27 @@ class Twitch extends Interface {
             isBroadcaster = true;
         }
 
-        if (this.shouldParseEmoticons()) {
-            message = this.parseEmoticons(message, emotes);
+        if (
+            formatMessages &&
+            this.shouldParseEmoticons
+        ) {
+            /**
+             * TODO: Add html entity processing.
+             *
+             * Notes...
+             *
+             * 1. Replace all emoticons with a unique random string.
+             * 2. Process html entites.
+             * 3. Replace all unique strings with the image element.
+             */
+            body = this.parseEmoticons(message, emotes);
         }
 
         this.emit('message', {
+            id: user.id || null,
             username: user['display-name'] || user.username,
-            body: message,
-            raw: rawMessage,
+            body,
+            raw: message,
             timestamp: user['tmi-sent-ts'] ? parseInt(user['tmi-sent-ts']) : new Date().getTime(),
             extra: {
                 colour: user.color,
@@ -217,7 +234,7 @@ class Twitch extends Interface {
             const { start, end, key } = emotes[k];
             const length = (end - start) + 1;
             const left = newMessage.substring(0, start + offset);
-            const middle = `<img class="emoticon" src="https://static-cdn.jtvnw.net/emoticons/v1/${key}/3.0" />`;
+            const middle = `<img class="emoticon" src="https://static-cdn.jtvnw.net/emoticons/v1/${key}/1.0" />`;
             const right = newMessage.substring(end + 1 + offset);
 
             offset += middle.length - length;
@@ -233,22 +250,14 @@ class Twitch extends Interface {
      *
      * @return {Promise}
      */
-    getBadges() {
+    async getBadges() {
         const userId = this.getConfig('userId');
 
         if (!userId) {
-            return Promise.reject(new Error('User ID is not set.'));
+            throw new Error('User ID is not set.');
         }
 
-        return new Promise((resolve, reject) => {
-            this.api('get', `chat/${userId}/badges`)
-                .then(({data}) => {
-                    resolve(data);
-                })
-                .catch(e => {
-                    reject(e);
-                });
-        });
+        return await this.api('get', `chat/${userId}/badges`);
     }
 
     /**
@@ -256,31 +265,22 @@ class Twitch extends Interface {
      *
      * @returns {Promise}
      */
-    getUser() {
+    async loadUser() {
         const accessToken = this.getConfig('accessToken');
 
         if (!accessToken) {
-            return Promise.reject(new Error('Access token not set.'));
+            throw new Error('Access token not set.');
         }
 
-        return new Promise((resolve, reject) => {
-            this.api('get', 'user')
-                .then(({data}) => {
-                    const channel = this.getConfig('channel', data.name);
-                    const username = this.getConfig('username', data.name);
-                    const userId = this.getConfig('userId', parseInt(data._id));
+        const { data } = await this.api('get', 'user');
+        const channel = this.getConfig('channel', data.name);
+        const username = this.getConfig('username', data.name);
+        const userId = this.getConfig('userId', parseInt(data._id));
 
-                    this.setConfig({
-                        channel,
-                        username,
-                        userId,
-                    });
-
-                    resolve();
-                })
-                .catch(e => {
-                    reject(e);
-                });
+        this.setConfig({
+            channel,
+            username,
+            userId,
         });
     }
 
@@ -290,7 +290,7 @@ class Twitch extends Interface {
      * @param {string|object} [key]
      * @param {string|number|object} [value]
      */
-    setConfig(key, value = null) {
+    async setConfig(key, value = null) {
         super.setConfig(key, value);
 
         this._http = axios.create({
@@ -337,7 +337,7 @@ class Twitch extends Interface {
      * @return {boolean}
      */
     hasEmoticons() {
-        return false;
+        return true;
     }
 
     /**
@@ -381,14 +381,14 @@ class Twitch extends Interface {
      *
      * @return {Promise}
      */
-    api(method, url, data = {}) {
+    async api(method, url, data = {}) {
         const clientId = this.getConfig('clientId');
 
         if (!clientId) {
-            return Promise.reject(new Error('Client ID not set.'));
+            throw new Error('Client ID not set.');
         }
 
-        return this._http.request({
+        return await this._http.request({
             method,
             url,
             data,

@@ -6,171 +6,131 @@
  */
 
 import axios from 'axios';
+import HtmlEntities from 'html-entities';
 import Interface from './interface';
 
 class Mixer extends Interface {
 
-  /**
-   * Initialize the Interface.
-   */
-  constructor() {
-    super();
+    /**
+     * Initialize the Interface.
+     */
+    constructor() {
+        super();
 
-    this._http = axios.create({
-      baseURL: 'https://mixer.com/api/v1/'
-    });
+        this._http = axios.create({
+            baseURL: 'https://mixer.com/api/v1/'
+        });
 
-    this._allowSend = false;
+        this.canSend = false;
+        this.endpoints = [];
+        this.authKey = null;
 
-    this.setConfig({
-      parseEmoticon: true,
-      parseUrl: true,
-      reconnect: true
-    });
-  }
-
-  /**
-   * Initialize the connection to WebSocket
-   *
-   * @return {Promise}
-   */
-  connect() {
-    return new Promise((resolve, reject) => {
-      const username = this.getConfig('username');
-
-      if (!username) {
-        reject(new Error('Username not specified.'));
-      }
-
-      this.api('get', `channels/${username}?fields=id,userId`)
-          .then(({ data }) => {
-
-            const { id : channelId, userId } = data;
-
-            this.setConfig({ channelId, userId });
-
-            this.api('get', `chats/${channelId}`)
-              .then(({ data }) => {
-
-                const { endpoints } = data;
-
-                this.endpoints = endpoints.entries();
-
-                const url = this.connectToWs(resolve);
-
-                this.emit('logs', `Connecting to Websocket using: ${url}`)
-              })
-              .catch(e => {
-                reject(new Error(e));
-              })
-          })
-          .catch(e => {
-            reject(new Error(e));
-          });
-
-    })
-  }
-
-  /**
-   * Disconnects the WebSocket Instance
-   */
-  disconnect() {
-    if (this.isConnected) {
-      this.ws.close();
-      return;
+        this.setConfig({
+            parseEmoticon: true,
+            parseUrl: true,
+            reconnect: true,
+            formatMessages: true,
+        });
     }
 
-    this.emit('disconnected');
-  }
+    /**
+     * Initialize the connection to WebSocket
+     *
+     * @return {Promise}
+     */
+    async connect() {
+        const channelId = this.getConfig('channelId');
+        const accessToken = this.getConfig('accessToken');
 
-  /**
-   * Method to send the given message
-   *
-   * @param {string}
-   */
-  send(message) {
-    if (typeof message === 'string') {
-      if (!this.isConnected) {
-        this.emit('logs', 'Unable to send message. No Connection to Websocket');
-        return;
-      }
+        if (!channelId) {
+            throw new Error('Channel ID not set.');
+        }
 
-      if (!this._allowSend) {
-        this.emit('logs', 'Unable to send message. Logged in as Anonymous User');
-        return;
-      }
+        const chats = await axios.get(`https://mixer.com/api/v1/chats/${channelId}`, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
 
-      message = { arguments: [message] };
+        const { authkey: authKey, endpoints } = chats.data;
+
+        this.authKey = authKey;
+        this.endpoints = endpoints;
+
+        const url = await this.getChatServer();
+        await this.connectToChat(url);
     }
 
-    let _message = {
-      id: +(new Date()),
-      type: 'method',
-      method: 'msg',
-      ...message
-    };
+    /**
+     * Disconnects the WebSocket Instance
+     */
+    async disconnect() {
+        super.disconnect();
 
-    this.ws.send(JSON.stringify(_message));
-  }
+        this.ws.close();
+    }
 
-  /*
-   * Parses emoticons
-   *
-   * return {array}
-   */
-  parseEmoticon(message) {
-    let span = document.createElement('span');
+    /**
+     * Method to send the given message
+     *
+     * @param {string} message
+     */
+    async send(message) {
+        if (typeof message === 'string') {
+            if (!this.isConnected) {
+                throw new Error('Unable to send message. No connection to WebSocket.');
+            }
 
-    return message
-      .map(item => {
-        if (item.type === 'emoticon') {
-          span.style.backgroundImage = `url(https://mixer.com/_latest/assets/emoticons/${item.pack}.png)`;
-          span.style.backgroundRepeat = 'no-repeat';
-          span.style.verticalAlign = 'baseline';
-          span.style.display = 'inline-block';
-          span.style.height = item.coords.height + 'px';
-          span.style.width = item.coords.width + 'px';
-          span.style.backgroundPositionX = (item.coords.x * -1) + 'px';
-          span.style.backgroundPositionY = (item.coords.y * -1) + 'px';
-          span.alt = item.text;
-          span.classList.add(item.type);
+            if (!this.canSend) {
+                throw new Error('Unable to send message. User ID or auth key is not set.');
+            }
 
-          item.text = span.outerHTML;
+            message = { arguments: [message] };
         }
 
-        return item;
-      })
-  }
+        this.ws.send(JSON.stringify({
+            id: +(new Date()),
+            type: 'method',
+            method: 'msg',
+            ...message
+        }));
+    }
 
-  /**
-   * Parses Links
-   *
-   * return {array}
-   */
-  parseUrl(message) {
-    let link = document.createElement('a');
+    /**
+     * Parses emoticons
+     *
+     * @param {Object} item
+     * return {array}
+     */
+    parseEmoticon(item) {
+        return '<span style="' +
+            `background-image: url('https://mixer.com/_latest/assets/emoticons/${item.pack}.png'); ` +
+            'background-repeat: no-repeat; ' +
+            `height: ${item.coords.height}px; ` +
+            `width: ${item.coords.width}px; ` +
+            `background-position-x: ${item.coords.x * -1}px; ` +
+            `background-position-y: ${item.coords.y * -1}px; "` +
+            `alt="${item.text}" class="${item.type}"/></span>`;
+    }
 
-    return message
-      .map(item => {
-        if (item.type === 'link') {
-          link.href = item.url;
-          link.textContent = item.text;
-          link.classList.add(item.type);
+    /**
+     * Parses links
+     *
+     * @param {Object} item
+     * return {array}
+     */
+    parseUrl(item) {
+        return `<a href="${item.url}" class="${item.type}">${item.text}</a>`;
+    }
 
-          item.text = link.outerHTML;
-        }
-
-        return item;
-      })
-  }
-
-  /**
-   * Parses a message in to the unified format.
-   *
-   * @param {object}
-   */
-  parseMessage({ data }) {
-    const {
+    /**
+     * Parses a message in to the unified format.
+     *
+     * @param {object} data
+     */
+    parseMessage({data}) {
+        const formatMessages = this.getConfig('formatMessages');
+        const {
             id,
             user_roles,
             user_level,
@@ -178,204 +138,264 @@ class Mixer extends Interface {
             user_avatar,
             message,
             user_name : username,
-          } = data;
+        } = data;
+        let body = null;
 
-    let body = JSON.parse(JSON.stringify(message.message));
+        if (formatMessages) {
+            body = JSON.parse(JSON.stringify(message.message));
+            body = body.map(item => {
+                switch (item.type) {
+                    case 'emoticon':
+                        if (this.shouldParseEmoticons) {
+                            return this.parseEmoticon(item);
+                        }
+                        break;
+                    case 'link':
+                        if (this.shouldParseUrl) {
+                            return this.parseUrl(item);
+                        }
+                        break;
+                    case 'text':
+                        item.text = HtmlEntities.AllHtmlEntities.encode(item.text);
+                        break;
+                }
 
-    if (this.shouldParseEmoticons) {
-      body = this.parseEmoticon(body);
-    }
+                return item.text;
+            });
+            body = body.reduce((text, item) => `${text}${item}`, '');
+        }
 
-    if (this.shouldParseUrl) {
-      body = this.parseUrl(body);
-    }
-
-    body = body.reduce((text, item) => `${text}${item.text}`, '');
-
-    this.emit('message', {
-      username,
-      id,
-      body,
-      raw: message.message,
-      extra: {
-        user_roles,
-        user_level,
-        user_id,
-        user_avatar
-      }
-    })
-  }
-
-  /**
-   * Creates an instance of Websocket
-   *
-   * @param {string} url
-   */
-  createWsInstance(resolve, url) {
-    this.ws = new WebSocket(url);
-
-    const args = [this.getConfig('channelId')],
-      userId = this.getConfig('userId'),
-      authKey = this.getConfig('authKey');
-
-    if (userId && authKey) {
-      args.push(userId);
-      args.push(authKey);
-    }
-
-    this.ws.addEventListener('open', data => {
-      this._connected = true;
-
-      this.send({ method: 'auth', arguments: args });
-
-      resolve();
-    })
-
-    this.ws.addEventListener('message', this.msgEvent.bind(this))
-
-    this.ws.addEventListener('error', () => {
-      this._allowSend = false;
-
-      this.emit('message-sending', false);
-
-      this.ws.removeEventListener('message', this.msgEvent.bind(this));
-
-      if (this.shouldReconnect) {
-        const url = this.connectToWs(resolve);
-        this.emit('logs', `Reconnecting to Websocket using: ${url}`);
-        return;
-      }
-
-      this.ws.close();
-    });
-
-    this.ws.addEventListener('close', () => {
-      this._allowSend = false;
-
-      this.ws.removeEventListener('message', this.msgEvent.bind(this));
-      this.emit('message-sending', false);
-      this.emit('disconnected');
-    });
-  }
-
-  /**
-   * Handles connection and reconnection of WebSocket
-   */
-  connectToWs(resolve) {
-    const item = this.endpoints.next();
-
-    if (item.done) {
-      this.emit('logs', 'Unable to connect to WebSocket servers');
-      this.emit('disconnected');
-      return;
-    }
-
-    const url = item.value.pop();
-
-    this.createWsInstance(resolve, url);
-
-    return url;
-  }
-
-  /**
-  * Unified http request method.
-  *
-  * @param {string} method
-  * @param {string} url
-  * @param {object} data
-  *
-  * @return {Promise}
-  */
-  api(method, url, data = {}) {
-    const username = this.getConfig('username');
-
-    if (!username) {
-      return Promise.reject(new Error('Username not specified.'));
-    }
-
-    return this._http.request({ method, url, data });
-  }
-
-  /**
-   * Handler for message receive from WebSocket
-   */
-  msgEvent({ data }) {
-    data = JSON.parse(data);
-
-    if (data.data && data.data.authenticated !== undefined) {
-      this._allowSend = data.data.authenticated;
-
-      this.emit('message-sending', true);
-      return;
-    }
-
-    if (data.originatingChannel && data.username) {
-      if (data.roles) {
-        this.emit('user-join', {
-          id: data.id,
-          username: data.username,
-          roles: data.roles
+        this.emit('message', {
+            username,
+            id,
+            body,
+            raw: message.message,
+            timestamp: new Date().getTime(),
+            extra: {
+                user_roles,
+                user_level,
+                user_id,
+                user_avatar
+            }
         })
-        return;
-      }
-
-      this.emit('user-leave', {
-        id: data.id,
-        username: data.username
-      })
-      return;
     }
 
-    switch (data.event) {
-      case 'ChatMessage':
-        this.parseMessage(data);
-        break;
+    /**
+     * Set the Socket package.
+     *
+     * @param ws
+     * @returns {Mixer}
+     */
+    async setWebSocket(ws) {
+        this.websocket = ws;
 
-      case 'DeleteMessage':
-        this.emit('message-delete', data.data.id);
-        break;
-
-      case 'ClearMessages':
-        this.emit('message-clear');
-        break;
-
-      case 'UserUpdate':
-        this.emit('user-update', {
-          id: data.data.user,
-          username: data.data.username,
-          roles: data.data.roles
-        })
-        break;
-      default:
+        return this;
     }
-  }
 
-  /**
-   * Returns current reconnect configuration
-   *
-   * return {boolean}
-   */
-  get shouldReconnect() {
-    return !!+this.getConfig('reconnect');
-  }
+    /**
+     * Creates an instance of WebSocket
+     *
+     * @param {string} url
+     */
+    async connectToChat(url) {
+        this.ws = new this.websocket(url) || new WebSocket(url);
 
-  /**
-   * Returns current emoticon parsing configuration
-   *
-   * return {boolean}
-   */
-  get shouldParseEmoticons() {
-    return !!+this.getConfig('parseEmoticon');
-  }
+        if (!this.ws) {
+            throw new Error('WebSocket not defined.');
+        }
 
-  /**
-   * Returns current url parsing configuration
-   *
-   * return {boolean}
-   */
-  get shouldParseUrl() {
-    return !!+this.getConfig('parseUrl');
-  }
+        const args = [
+            this.getConfig('channelId'),
+        ];
+        const userId = this.getConfig('userId');
+        const authKey = this.getConfig('authKey');
+
+        if (userId && authKey) {
+            args.push(userId);
+            args.push(authKey);
+
+            this.canSend = true;
+        }
+
+        this.ws.onopen = () => {
+            this._connected = true;
+            this.emit('connected');
+            this.resetReconnect();
+            this.send({
+                method: 'auth',
+                arguments: args
+            });
+        };
+        this.ws.onmessage = this.msgEvent.bind(this);
+        this.ws.onerror = async (e) => {
+            this.canSend = false;
+
+            if (this.shouldReconnect) {
+                this.increaseReconnect();
+                this.emit('reconnect', this.reconnectAttempt);
+
+                const url = await this.getChatServer();
+
+                return setTimeout(async () => {
+                    return await this.connectToChat(url);
+                }, this.reconnectCurrentInterval);
+            }
+
+            this.emit('error', e);
+        };
+        this.ws.onclose = () => {
+            this.canSend = false;
+            this.emit('disconnected');
+        };
+    }
+
+    /**
+     * Fetch and set required user data for the Interface.
+     *
+     * @returns {Promise}
+     */
+    async loadUser() {
+        const username = this.getConfig('username');
+
+        if (!username) {
+            throw new Error('Username not set.');
+        }
+
+        const { data } = await this.api('get', `channels/${username}?fields=id,userId`);
+        const channelId = this.getConfig('channelId', data.id);
+        const userId = this.getConfig('userId', data.userId);
+
+        this.setConfig({
+            channelId,
+            userId,
+        });
+    }
+
+    /**
+     * Fetch the next endpoint chat server to connect to.
+     *
+     * @returns {Promise.<T|*>}
+     */
+    async getChatServer() {
+        const endpoints = this.endpoints;
+        const endpoint = endpoints.entries().next();
+
+        if (endpoint.done) {
+            throw new Error('No more chat servers available.');
+        }
+
+        return endpoint.value.pop();
+    }
+
+    /**
+     * Name of the Interface.
+     *
+     * @return {string}
+     */
+    getName() {
+        return 'Mixer';
+    }
+
+    /**
+     * The short & lowercase key for the Interface. Should be the same as the
+     * InterfaceBag Key.
+     *
+     * @return {string}
+     */
+    getKey() {
+        return 'mixer';
+    }
+
+    /**
+     * Returns whether the Interface supports emoticons.
+     *
+     * @return {boolean}
+     */
+    hasEmoticons() {
+        return true;
+    }
+
+    /**
+     * Returns whether the Interface supports writing/sending.
+     *
+     * @return {boolean}
+     */
+    hasWriting() {
+        return true;
+    }
+
+    /**
+     * Returns whether the Interface uses a LIVE datasource (Such as Websockets
+     * or DataSource), or uses API polling.
+     */
+    isLive() {
+        return true;
+    }
+
+    /**
+     * Unified http request method.
+     *
+     * @param {string} method
+     * @param {string} url
+     * @param {object} data
+     *
+     * @return {Promise}
+     */
+    async api(method, url, data = {}) {
+        return await this._http.request({
+            method,
+            url,
+            data,
+        });
+    }
+
+    /**
+     * Handler for message receive from WebSocket
+     */
+    msgEvent({data}) {
+        data = JSON.parse(data);
+
+        if (data.originatingChannel && data.username) {
+            if (data.roles) {
+                this.emit('user-join', {
+                    id: data.id,
+                    username: data.username,
+                    roles: data.roles
+                });
+                return;
+            }
+
+            this.emit('user-leave', {
+                id: data.id,
+                username: data.username
+            });
+            return;
+        }
+
+        switch (data.event) {
+            case 'ChatMessage':
+                this.parseMessage(data);
+                break;
+            case 'DeleteMessage':
+                this.emit('delete-message', data.data.id);
+                break;
+            case 'PurgeMessage':
+                this.emit('purge-message', data.data.user_id);
+                break;
+            case 'ClearMessages':
+                this.emit('clear-messages');
+                break;
+            case 'UserTimeout':
+                this.emit('user-timeout', {
+                    user: {
+                        id: data.data.user.user_id,
+                        username: data.data.user.user_name,
+                    },
+                    duration: data.data.duration,
+                });
+                break;
+        }
+    }
 
 }
 
