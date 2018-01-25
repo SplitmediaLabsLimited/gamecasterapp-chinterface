@@ -16,7 +16,7 @@ class Twitch extends Interface {
     constructor() {
         super();
 
-        this._client = null;
+        this.client = null;
 
         this.setConfig({
             parseEmoticon: true,
@@ -49,7 +49,7 @@ class Twitch extends Interface {
                     };
                 }
 
-                this._client = new tmi.client({
+                this.client = new tmi.client({
                     channels: [channel],
                     identity,
                     options: {
@@ -63,13 +63,13 @@ class Twitch extends Interface {
                 });
 
 
-                this._client.on('connected', () => {
-                    this._connected = true;
+                this.client.on('connected', () => {
+                    this.connected = true;
                     this.emit('connected');
                     resolve();
                 });
 
-                this._client.connect();
+                this.client.connect();
             } else {
                 reject(new Error('ClientID or channel not specified.'));
             }
@@ -82,9 +82,9 @@ class Twitch extends Interface {
     disconnect() {
         super.disconnect();
 
-        this._client.disconnect();
-        this._client = null;
-        this._connected = false;
+        this.client.disconnect();
+        this.client = null;
+        this.connected = false;
     }
 
     /**
@@ -96,7 +96,7 @@ class Twitch extends Interface {
      * @return {Promise}
      */
     async send(message) {
-        return await this._client.say(this.getConfig('channel'), message);
+        return await this.client.say(this.getConfig('channel'), message);
     }
 
     /**
@@ -109,10 +109,10 @@ class Twitch extends Interface {
         super.on(evnt, callback);
 
         if (
-            this._client !== null &&
+            this.client !== null &&
             evnt === 'message'
         ) {
-            this._client.on('chat', this.msgEvnt.bind(this));
+            this.client.on('chat', this.msgEvnt.bind(this));
         }
     }
 
@@ -125,10 +125,10 @@ class Twitch extends Interface {
         super.destroy(evnt);
 
         if (
-            this._client !== null &&
+            this.client !== null &&
             evnt === 'message'
         ) {
-            this._client.removeListener('chat', this.msgEvnt.bind(this));
+            this.client.removeListener('chat', this.msgEvnt.bind(this));
         }
     }
 
@@ -293,7 +293,7 @@ class Twitch extends Interface {
     async setConfig(key, value = null) {
         super.setConfig(key, value);
 
-        this._http = axios.create({
+        this.http = axios.create({
             baseURL: 'https://api.twitch.tv/kraken/',
             headers: {
                 'Client-ID': this.getConfig('clientId'),
@@ -309,7 +309,7 @@ class Twitch extends Interface {
      * @return {*}
      */
     getClient() {
-        return this._client;
+        return this.client;
     }
 
     /**
@@ -367,7 +367,7 @@ class Twitch extends Interface {
      * @returns {Twitch}
      */
     clientOn(evnt, callback) {
-        this._client.on(evnt, callback);
+        this.client.on(evnt, callback);
 
         return this;
     }
@@ -388,7 +388,7 @@ class Twitch extends Interface {
             throw new Error('Client ID not set.');
         }
 
-        return await this._http.request({
+        return await this.http.request({
             method,
             url,
             data,

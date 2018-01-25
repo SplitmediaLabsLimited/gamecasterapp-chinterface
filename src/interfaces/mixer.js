@@ -17,7 +17,7 @@ class Mixer extends Interface {
     constructor() {
         super();
 
-        this._http = axios.create({
+        this.http = axios.create({
             baseURL: 'https://mixer.com/api/v1/'
         });
 
@@ -92,7 +92,7 @@ class Mixer extends Interface {
             id: +(new Date()),
             type: 'method',
             method: 'msg',
-            ...message
+            ...message,
         }));
     }
 
@@ -100,7 +100,7 @@ class Mixer extends Interface {
      * Parses emoticons
      *
      * @param {Object} item
-     * return {array}
+     * @return {array}
      */
     parseEmoticon(item) {
         return '<span style="' +
@@ -117,7 +117,7 @@ class Mixer extends Interface {
      * Parses links
      *
      * @param {Object} item
-     * return {array}
+     * @return {array}
      */
     parseUrl(item) {
         return `<a href="${item.url}" class="${item.type}">${item.text}</a>`;
@@ -175,7 +175,7 @@ class Mixer extends Interface {
                 user_roles,
                 user_level,
                 user_id,
-                user_avatar
+                user_avatar,
             }
         })
     }
@@ -218,12 +218,12 @@ class Mixer extends Interface {
         }
 
         this.ws.onopen = () => {
-            this._connected = true;
+            this.connected = true;
             this.emit('connected');
             this.resetReconnect();
             this.send({
                 method: 'auth',
-                arguments: args
+                arguments: args,
             });
         };
         this.ws.onmessage = this.msgEvent.bind(this);
@@ -342,7 +342,7 @@ class Mixer extends Interface {
      * @return {Promise}
      */
     async api(method, url, data = {}) {
-        return await this._http.request({
+        return await this.http.request({
             method,
             url,
             data,
@@ -360,14 +360,14 @@ class Mixer extends Interface {
                 this.emit('user-join', {
                     id: data.id,
                     username: data.username,
-                    roles: data.roles
+                    roles: data.roles,
                 });
                 return;
             }
 
             this.emit('user-leave', {
                 id: data.id,
-                username: data.username
+                username: data.username,
             });
             return;
         }

@@ -12,7 +12,7 @@ import type { Config } from './types';
 
 class Chat {
 
-    _debug = false;
+    debug = false;
 
     /**
      * Returns the Interface for the given service.
@@ -68,7 +68,7 @@ class Chat {
      * @return {boolean}
      */
     setDebug(debug: boolean) {
-        this._debug = debug;
+        this.debug = debug;
 
         return this.isDebug();
     }
@@ -79,7 +79,7 @@ class Chat {
      * @return {boolean}
      */
     isDebug() {
-        return this._debug;
+        return this.debug;
     }
 
 }

@@ -13,9 +13,9 @@ class Interface {
      * Initialize the Interface.
      */
     constructor() {
-        this._config = {};
-        this._callbacks = {};
-        this._connected = false;
+        this.config = {};
+        this.callbacks = {};
+        this.connected = false;
 
         this.reconnectCurrentInterval = 1000; // 1s [default]
         this.reconnectDefaultInterval = 1000; // 1s [default]
@@ -79,7 +79,7 @@ class Interface {
      * @param {Function} callback
      */
     on(evnt, callback) {
-        this._callbacks[evnt] = callback;
+        this.callbacks[evnt] = callback;
     }
 
     /**
@@ -89,8 +89,8 @@ class Interface {
      * @param {object} [data]
      */
     emit(evnt, data = {}) {
-        if (this._callbacks.hasOwnProperty(evnt)) {
-            this._callbacks[evnt](data);
+        if (this.callbacks.hasOwnProperty(evnt)) {
+            this.callbacks[evnt](data);
         }
     }
 
@@ -100,7 +100,7 @@ class Interface {
      * @param {string} evnt
      */
     destroy(evnt) {
-        delete this._callbacks[evnt];
+        delete this.callbacks[evnt];
     }
 
     /**
@@ -115,7 +115,7 @@ class Interface {
                 this.setConfig(k, key[k]);
             });
         } else {
-            this._config[key] = value;
+            this.config[key] = value;
         }
 
         return this;
@@ -132,16 +132,16 @@ class Interface {
     getConfig(key = null, dflt = null) {
         if (key !== null) {
             if (
-                this._config[key] === undefined ||
-                (Helpers.isString(this._config[key]) && !this._config[key].length)
+                this.config[key] === undefined ||
+                (Helpers.isString(this.config[key]) && !this.config[key].length)
             ) {
                 return dflt;
             }
 
-            return this._config[key];
+            return this.config[key];
         }
 
-        return this._config;
+        return this.config;
     }
 
     /**
@@ -192,7 +192,7 @@ class Interface {
     /**
      * Returns current emoticon parsing configuration
      *
-     * return {boolean}
+     * @return {boolean}
      */
     get shouldParseEmoticons() {
         return this.getConfig('parseEmoticon');
@@ -201,7 +201,7 @@ class Interface {
     /**
      * Returns current url parsing configuration
      *
-     * return {boolean}
+     * @return {boolean}
      */
     get shouldParseUrl() {
         return this.getConfig('parseUrl');
@@ -210,7 +210,7 @@ class Interface {
     /**
      * Returns current reconnect configuration
      *
-     * return {boolean}
+     * @return {boolean}
      */
     get shouldReconnect() {
         return this.getConfig('reconnect');
@@ -222,7 +222,7 @@ class Interface {
      * @return {boolean}
      */
     get isConnected() {
-        return this._connected;
+        return this.connected;
     }
 
     /**
