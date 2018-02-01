@@ -36,6 +36,7 @@
     "eslint-plugin-react": "^7.2.0",
     "events": "^1.1.1",
     "flow-bin": "^0.52.0",
+    "html-entities": "^1.2.1",
     "jest-cli": "^20.0.4",
     "lodash": "^4.17.4",
     "mocha": "3.3.0",
@@ -76,8 +77,5 @@
   "bugs": {
     "url": ""
   },
-  "homepage": "",
-  "dependencies": {
-    "html-entities": "^1.2.1"
-  }
+  "homepage": ""
 }
