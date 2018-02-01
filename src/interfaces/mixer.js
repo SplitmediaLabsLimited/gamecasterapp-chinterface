@@ -394,6 +394,13 @@ class Mixer extends Interface {
                     duration: data.data.duration,
                 });
                 break;
+            case 'UserUpdate':
+                this.emit('user-update', {
+                  id: data.data.user,
+                  username: data.data.username,
+                  roles: data.data.roles
+                })
+                break;
         }
     }
 
