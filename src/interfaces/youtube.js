@@ -21,7 +21,7 @@ class Youtube extends Interface {
 
     this.setConfig({
       maxResults: 200,
-      interval: 5000
+      interval: 5000,
     });
   }
 
@@ -33,10 +33,9 @@ class Youtube extends Interface {
   connect() {
     super.connect();
 
-    return this.fetchMessage()
-      .then(() => {
-        this._connected = true;
-      });
+    return this.fetchMessage().then(() => {
+      this.connected = true;
+    })
   }
 
   /**
@@ -45,8 +44,8 @@ class Youtube extends Interface {
   disconnect() {
     super.disconnect();
 
-    this._connected = false;
-
+    this.connected = false;
+    clearInterval(this.interval);
     this.emit('disconnected');
   }
 
@@ -63,8 +62,8 @@ class Youtube extends Interface {
         liveChatId: liveChatId,
         type: 'textMessageEvent',
         textMessageDetails: {
-          messageText: message
-        }
+          messageText: message,
+        },
       }
     })
     .then(({ data }) => {
@@ -77,43 +76,44 @@ class Youtube extends Interface {
    *
    * @return {Promise}
    */
-  fetchMessage(token = '') {
+  async fetchMessage(token = '') {
     const liveChatId = this.getConfig('liveChatId'),
           maxResults = this.getConfig('maxResults'),
           tokenParam = token ? `&pageToken=${token}` : '';
 
-    return new Promise((resolve, reject) => {
-      this.api('get', `?part=snippet,authorDetails&liveChatId=${liveChatId}&maxResults=${maxResults}${tokenParam}`)
+    try {
+      await this.api('get', `?part=snippet,authorDetails&liveChatId=${liveChatId}&maxResults=${maxResults}${tokenParam}`)
         .then(({ data }) => {
 
           const { items, nextPageToken, pollingIntervalMillis } = data;
 
           this.handleMessages(items);
 
-          resolve();
-
           const intervalConfig = +this.getConfig('interval'),
-                interval = pollingIntervalMillis > intervalConfig ? pollingIntervalMillis : intervalConfig;
+                interval = pollingIntervalMillis > intervalConfig
+                              ? pollingIntervalMillis
+                              : intervalConfig;
 
           this.interval = setTimeout(
             () => {
-              if (this._connected) {
+              if (this.connected) {
                 this.fetchMessage(nextPageToken)
               }
             },
             interval
           );
         })
-        .catch(({ response }) => {
-          const { error } = response.data;
 
-          if (+error.code === 401) {
-            this.emit('refresh_token');
-          }
+      return Promise.resolve();
+    } catch({ response }) {
+      const { error } = response.data;
 
-          reject(error)
-        });
-    })
+      if (+error.code === 401) {
+        this.emit('refresh_token');
+      }
+
+      return Promise.reject(error);
+    }
   }
 
   /**
@@ -164,7 +164,7 @@ class Youtube extends Interface {
               moderator: authorDetails.isChatModerator,
               owner: authorDetails.isChatOwner,
               sponsor: authorDetails.isChatSponsor,
-              verified: authorDetails.isVerified
+              verified: authorDetails.isVerified,
           },
         })
       })
@@ -177,16 +177,12 @@ class Youtube extends Interface {
    * return {string}
    */
   parseUrl (message) {
-    const regex = new RegExp(/https?:\/\/\S+/ig),
-          link = document.createElement('a');
+    const regex = new RegExp(/https?:\/\/\S+/ig);
 
     return message.replace(regex, match => {
-      let text = match.length > 40 ? match.slice(0, 37) + '...' : match;
+      const text = match.length > 40 ? match.slice(0, 37) + '...' : match;
 
-      link.href = match;
-      link.textContent = text;
-
-      return link.outerHTML;
+      return `<a href='${match}' class='link'>${text}</a>`;
     });
   }
 
@@ -199,7 +195,7 @@ class Youtube extends Interface {
   setConfig(key, value = null) {
     super.setConfig(key, value);
 
-    this._http = axios.create({
+    this.http = axios.create({
         baseURL: 'https://www.googleapis.com/youtube/v3/liveChat/messages',
         headers: {
           'Authorization': `Bearer ${this.getConfig('accessToken')}`,
@@ -223,7 +219,7 @@ class Youtube extends Interface {
         return Promise.reject(new Error('Access Token not set.'));
       }
 
-      return this._http.request({
+      return this.http.request({
         method,
         url,
         data,
