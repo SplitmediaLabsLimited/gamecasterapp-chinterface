@@ -14,6 +14,7 @@ class Interface {
      */
     constructor() {
         this.config = {};
+        this.required = []; // required config settings
         this.callbacks = {};
         this.connected = false;
 
@@ -31,6 +32,8 @@ class Interface {
         if (this.isConnected) {
             return;
         }
+
+        this.requiredConfigSet();
     }
 
     /**
@@ -142,6 +145,17 @@ class Interface {
         }
 
         return this.config;
+    }
+
+    /**
+     * Check all the required config options are set.
+     */
+    requiredConfigSet() {
+        this.required.forEach(item => {
+            if (!this.getConfig(item)) {
+                throw new Error('Required config options not set.');
+            }
+        });
     }
 
     /**

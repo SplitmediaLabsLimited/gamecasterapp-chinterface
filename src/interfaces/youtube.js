@@ -10,220 +10,330 @@ import Interface from './interface';
 
 class Youtube extends Interface {
 
-  messagesId = [];
-  interval;
+    messagesId = [];
+    fetchInterval;
+    nextPageToken;
 
-  /**
-   * Initialize the Interface.
-   */
-  constructor() {
-    super();
+    /**
+     * Initialize the Interface.
+     */
+    constructor() {
+        super();
 
-    this.setConfig({
-      maxResults: 200,
-      interval: 5000,
-    });
-  }
-
-  /**
-   * Creates the initial message request
-   *
-   * @return {Promise}
-   */
-  connect() {
-    super.connect();
-
-    return this.fetchMessage().then(() => {
-      this.connected = true;
-    })
-  }
-
-  /**
-   * Stops the polling request
-   */
-  disconnect() {
-    super.disconnect();
-
-    this.connected = false;
-    clearInterval(this.interval);
-    this.emit('disconnected');
-  }
-
-  /**
-   * Send message to the specified live chat id
-   *
-   * @return {Promise}
-   */
-  send(message) {
-    const liveChatId = this.getConfig('liveChatId');
-
-    return this.api('post', '?part=snippet,authorDetails', {
-      snippet: {
-        liveChatId: liveChatId,
-        type: 'textMessageEvent',
-        textMessageDetails: {
-          messageText: message,
-        },
-      }
-    })
-    .then(({ data }) => {
-      this.handleMessages([data]);
-    });
-  }
-
-  /**
-   * Fetch current available messages
-   *
-   * @return {Promise}
-   */
-  async fetchMessage(token = '') {
-    const liveChatId = this.getConfig('liveChatId'),
-          maxResults = this.getConfig('maxResults'),
-          tokenParam = token ? `&pageToken=${token}` : '';
-
-    try {
-      await this.api('get', `?part=snippet,authorDetails&liveChatId=${liveChatId}&maxResults=${maxResults}${tokenParam}`)
-        .then(({ data }) => {
-
-          const { items, nextPageToken, pollingIntervalMillis } = data;
-
-          this.handleMessages(items);
-
-          const intervalConfig = +this.getConfig('interval'),
-                interval = pollingIntervalMillis > intervalConfig
-                              ? pollingIntervalMillis
-                              : intervalConfig;
-
-          this.interval = setTimeout(
-            () => {
-              if (this.connected) {
-                this.fetchMessage(nextPageToken)
-              }
-            },
-            interval
-          );
-        })
-
-      return Promise.resolve();
-    } catch({ response }) {
-      const { error } = response.data;
-
-      if (+error.code === 401) {
-        this.emit('refresh_token');
-      }
-
-      return Promise.reject(error);
+        this.required = [
+            'liveChatId',
+            'accessToken',
+        ];
+        this.setConfig({
+            maxResults: 200,
+            interval: 5000,
+            profileImageSize: 64,
+            parseUrl: true,
+            formatMessages: true,
+            parseEmoticon: true,
+        });
     }
-  }
 
-  /**
-   * Parses a message in to the unified format.
-   *
-   * @param {object}
-   */
-  handleMessages(list) {
-    const maxResults = this.getConfig('maxResults');
+    /**
+     * Creates the initial message request
+     *
+     * @return {Promise.<void>}
+     */
+    async connect() {
+        super.connect();
 
-    list
-      .forEach(({ id, snippet, authorDetails }) => {
+        try {
+            this.connected = true;
+            this.emit('connected');
 
-        if (this.messagesId.includes(id)) {
-          return;
+            await this.fetchMessages();
+        } catch (e) {
+            throw new Error(e);
+        }
+    }
+
+    /**
+     * Stops the polling request
+     */
+    disconnect() {
+        super.disconnect();
+
+        this.connected = false;
+        clearInterval(this.fetchInterval);
+
+        this.emit('disconnected');
+    }
+
+    /**
+     * Send message to the specified live chat id
+     *
+     * @return {Promise}
+     */
+    async send(messageText) {
+        if (!messageText.length) {
+            throw new Error('A message cannot be empty!');
         }
 
-        this.messagesId.push(id);
+        const liveChatId = this.getConfig('liveChatId');
+        const { data } = await this.api('post', 'liveChat/messages?part=snippet,authorDetails', {
+            snippet: {
+                liveChatId,
+                type: 'textMessageEvent',
+                textMessageDetails: {
+                    messageText,
+                },
+            }
+        });
 
-        if (this.messagesId.length > maxResults) {
-          this.messagesId = this.messagesId.slice(1);
+        this.handleMessages([data]);
+    }
+
+    /**
+     * Fetch current available messages
+     *
+     * @return {Promise}
+     */
+    async fetchMessages() {
+        const liveChatId = this.getConfig('liveChatId');
+        const maxResults = this.getConfig('maxResults');
+        const profileImageSize = this.getConfig('profileImageSize');
+        const pageToken = this.nextPageToken ? this.nextPageToken : '';
+
+        const { data } = await this.api('get', 'liveChat/messages', {
+            part: 'snippet,authorDetails',
+            profileImageSize,
+            liveChatId,
+            maxResults,
+            pageToken,
+        });
+        const { items, nextPageToken, pollingIntervalMillis } = data;
+
+        this.nextPageToken = nextPageToken;
+        this.handleMessages(items);
+
+        const intervalConfig = parseInt(this.getConfig('interval'));
+        const interval = pollingIntervalMillis > intervalConfig ? pollingIntervalMillis : intervalConfig;
+
+        if (this.connected) {
+            this.fetchInterval = setTimeout(() => {
+                this.fetchMessages();
+            }, interval);
+        }
+    }
+
+    /**
+     * Parses a message into the unified format.
+     *
+     * @param {object} list
+     */
+    handleMessages(list) {
+        list.forEach(({id, snippet, authorDetails}) => {
+            if (this.messagesId.includes(id)) {
+                return;
+            }
+
+            this.messagesId.push(id);
+
+            let body = null;
+            let message = snippet.displayMessage || '';
+            let extra = {
+                type: snippet.type,
+                authorChannelId: authorDetails.channelId,
+                image: authorDetails.profileImageUrl || '',
+                moderator: authorDetails.isChatModerator,
+                owner: authorDetails.isChatOwner,
+                sponsor: authorDetails.isChatSponsor,
+                verified: authorDetails.isVerified,
+            };
+
+            switch (snippet.type) {
+                case 'superChatEvent':
+                    message = snippet.superChatDetails.userComment;
+                    extra.amount = snippet.superChatDetails.amountDisplayString;
+                    extra.amountMicros = snippet.superChatDetails.amountMicros;
+                    extra.tier = snippet.superChatDetails.tier;
+                    extra.currency = snippet.superChatDetails.currency;
+
+                    this.emit('super-chat', snippet.superChatDetails);
+                    return;
+
+                case 'messageDeletedEvent':
+                    this.emit('delete-message', snippet.messageDeletedDetails.deletedMessageId);
+                    return;
+
+                case 'userBannedEvent':
+                    this.emit('user-banned', snippet.userBannedDetails);
+                    return;
+
+                case 'chatEndedEvent':
+                    this.emit('chat-ended');
+                    return;
+            }
+
+            if (this.getConfig('formatMessages')) {
+                body = this.parseUrl(message);
+            }
+
+            this.emit('message', {
+                id,
+                body,
+                username: authorDetails.displayName,
+                raw: message,
+                timestamp: new Date(snippet.publishedAt).getTime() || new Date().getTime(),
+                extra,
+            });
+        });
+    }
+
+    /**
+     * Parses Links
+     *
+     * return {string}
+     */
+    parseUrl(message) {
+        const regex = new RegExp(/https?:\/\/\S+/ig);
+
+        return message.replace(regex, match => {
+            return `<a href='${match}' class='link'>${match}</a>`;
+        });
+    }
+
+    /**
+     * Sets Config value(s) for the Interface.
+     *
+     * @param {string|object} [key]
+     * @param {string|number|object} [value]
+     */
+    setConfig(key, value = null) {
+        super.setConfig(key, value);
+
+        this.http = axios.create({
+            baseURL: 'https://www.googleapis.com/youtube/v3/',
+            headers: {
+                'Authorization': `Bearer ${this.getConfig('accessToken')}`,
+            },
+        });
+    }
+
+    /**
+     * Fetch and set the required chat ID.
+     *
+     * @returns {Promise.<void>}
+     */
+    async loadChatId() {
+        const { data } = await this.api('get', 'liveBroadcasts', {
+            part: 'snippet',
+            broadcastStatus: 'active',
+            broadcastType: 'all',
+            maxResults: 1,
+        });
+
+        if (data.items.length) {
+            const liveChatId = this.getConfig('liveChatId', data.items[0].snippet.liveChatId || null);
+            this.setConfig({
+                liveChatId,
+            });
+        } else {
+            throw new Error('No live broadcasts available.');
+        }
+    }
+
+    /**
+     * Query the YouTube API for a given method, endpoint and query param.
+     *
+     * @param {string} method
+     * @param {string} url
+     * @param {object} data
+     *
+     * @return {Promise}
+     */
+    async api(method, url, data = {}) {
+        const accessToken = this.getConfig('accessToken');
+        let request = {
+            method,
+            url,
+        };
+
+        if (!accessToken) {
+            throw new Error('accessToken not set.');
         }
 
-        let message = snippet.displayMessage,
-            amount = 0,
-            tier = 0;
-
-        if (snippet.type === 'superChatEvent') {
-          message = snippet.superChatDetails.userComment;
-          amount = snippet.superChatDetails.amountDisplayString;
-          tier = snippet.superChatDetails.tier;
+        if (method === 'get') {
+            request.params = data;
+        } else {
+            request.data = data;
         }
 
-        const body = this.parseUrl(message);
+        try {
+            return await this.http.request(request);
+        } catch ({ response }) {
+            const { error } = response.data;
 
-        this.emit('message', {
-          id,
-          body,
-          username: authorDetails.displayName,
-          raw: message,
-          timestamp: new Date(snippet.publishedAt).getTime() || new Date().getTime(),
-          extra: {
-              type: snippet.type,
-              amount,
-              tier,
-              message: body,
-              image: authorDetails.profileImageUrl || '',
-              moderator: authorDetails.isChatModerator,
-              owner: authorDetails.isChatOwner,
-              sponsor: authorDetails.isChatSponsor,
-              verified: authorDetails.isVerified,
-          },
-        })
-      })
-  }
+            this.checkError(error);
 
+            throw new Error(error.errors[0].reason);
+        }
+    }
 
-  /**
-   * Parses Links
-   *
-   * return {string}
-   */
-  parseUrl (message) {
-    const regex = new RegExp(/https?:\/\/\S+/ig);
+    /**
+     * Check the error status and emit appropriate event.
+     *
+     * @param {object} error
+     */
+    checkError(error) {
+        switch (parseInt(error.code)) {
+            case 401:
+                this.emit('refresh-token', error);
+                break;
+            default:
+                this.emit('error', error);
+                break;
+        }
+    }
 
-    return message.replace(regex, match => {
-      const text = match.length > 40 ? match.slice(0, 37) + '...' : match;
+    /**
+     * Name of the Interface.
+     *
+     * @return {string}
+     */
+    getName() {
+        return 'Youtube';
+    }
 
-      return `<a href='${match}' class='link'>${text}</a>`;
-    });
-  }
+    /**
+     * The short & lowercase key for the Interface. Should be the same as the
+     * InterfaceBag Key.
+     *
+     * @return {string}
+     */
+    getKey() {
+        return 'youtube';
+    }
 
-  /**
-   * Sets Config value(s) for the Interface.
-   *
-   * @param {string|object} [key]
-   * @param {string|number|object} [value]
-   */
-  setConfig(key, value = null) {
-    super.setConfig(key, value);
+    /**
+     * Returns whether the Interface supports emoticons.
+     *
+     * @return {boolean}
+     */
+    hasEmoticons() {
+        return true;
+    }
 
-    this.http = axios.create({
-        baseURL: 'https://www.googleapis.com/youtube/v3/liveChat/messages',
-        headers: {
-          'Authorization': `Bearer ${this.getConfig('accessToken')}`,
-        },
-    });
-  }
+    /**
+     * Returns whether the Interface supports writing/sending.
+     *
+     * @return {boolean}
+     */
+    hasWriting() {
+        return true;
+    }
 
-  /**
-   * Query the Twitch API for a given method, endpoint and query param.
-   *
-   * @param {string} method
-   * @param {string} url
-   * @param {object} data
-   *
-   * @return {Promise}
-   */
-    api(method, url, data = {}) {
-      const accessToken = this.getConfig('accessToken');
-
-      if (!accessToken) {
-        return Promise.reject(new Error('Access Token not set.'));
-      }
-
-      return this.http.request({
-        method,
-        url,
-        data,
-      });
+    /**
+     * Returns whether the Interface uses a LIVE datasource (Such as Websockets
+     * or DataSource), or uses API polling.
+     */
+    isLive() {
+        return false;
     }
 }
 
