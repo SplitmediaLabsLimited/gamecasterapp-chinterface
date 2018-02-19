@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.common.js",
   "module": "dist/chinterface.es.js",
