@@ -15,6 +15,10 @@ export default async function run() {
         username: 'jonliney',
         accessToken: 'vg2wq2r3ekj841sqoz4tacjai6lc85',
     });
+
+    await youtube({
+        accessToken: 'ya29.GlxnBR610Pghngtwieiql5X-GWS3zEb77Yj-GgTWVn4So4sZQ-Mo7qUtmWYvkHtluNqcQWV_UejwHIn5cpJsRDdc4UywjYqx3LFSoRYsk8nQtBKAVKWfGXmiioISYA',
+    });
 }();
 
 async function twitch(config) {
@@ -60,6 +64,33 @@ async function mixer(config) {
 
         MixerChat.on('connected', () => {
             console.log('Mixer chat is connected!');
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function youtube(config) {
+    const YouTubeChat = chinterface.service('youtube');
+
+    try {
+        YouTubeChat.on('connected', () => {
+            console.log('YouTube chat is connected!');
+        });
+        YouTubeChat.on('refresh-token', () => {
+            console.log('hi');
+        });
+
+        await YouTubeChat.setConfig(config);
+        await YouTubeChat.loadChatId();
+        await YouTubeChat.connect();
+
+        YouTubeChat.on('message', data => {
+            console.log('YOUTUBE - [New Message]', data);
+            const msg = document.createElement('div');
+            msg.className = 'youtube message';
+            msg.innerHTML = data.body;
+            document.getElementById('chat').appendChild(msg);
         });
     } catch (e) {
         console.error(e);

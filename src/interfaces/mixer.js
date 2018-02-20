@@ -25,6 +25,9 @@ class Mixer extends Interface {
         this.endpoints = [];
         this.authKey = null;
 
+        this.required = [
+            'channelId',
+        ];
         this.setConfig({
             parseEmoticon: true,
             parseUrl: true,
@@ -39,12 +42,10 @@ class Mixer extends Interface {
      * @return {Promise}
      */
     async connect() {
+        super.connect();
+
         const channelId = this.getConfig('channelId');
         const accessToken = this.getConfig('accessToken');
-
-        if (!channelId) {
-            throw new Error('Channel ID not set.');
-        }
 
         const chats = await axios.get(`https://mixer.com/api/v1/chats/${channelId}`, {
             headers: {
@@ -82,7 +83,7 @@ class Mixer extends Interface {
             }
 
             if (!this.canSend) {
-                throw new Error('Unable to send message. User ID or auth key is not set.');
+                throw new Error('Unable to send message. userId or authKey is not set.');
             }
 
             message = { arguments: [message] };
@@ -258,7 +259,7 @@ class Mixer extends Interface {
         const username = this.getConfig('username');
 
         if (!username) {
-            throw new Error('Username not set.');
+            throw new Error('username not set.');
         }
 
         const { data } = await this.api('get', `channels/${username}?fields=id,userId`);

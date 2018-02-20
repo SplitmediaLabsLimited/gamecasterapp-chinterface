@@ -18,6 +18,11 @@ class Twitch extends Interface {
 
         this.client = null;
 
+        this.required = [
+            'clientId',
+            'channel',
+            'userId',
+        ];
         this.setConfig({
             parseEmoticon: true,
             reconnect: true,
@@ -37,42 +42,38 @@ class Twitch extends Interface {
             const clientId = this.getConfig('clientId');
             const channel = this.getConfig('channel');
 
-            if (clientId && channel) {
-                const username = this.getConfig('username');
-                const accessToken = this.getConfig('accessToken');
-                let identity = {};
+            const username = this.getConfig('username');
+            const accessToken = this.getConfig('accessToken');
+            let identity = {};
 
-                if (username && accessToken) {
-                    identity = {
-                        username,
-                        password: accessToken,
-                    };
-                }
-
-                this.client = new tmi.client({
-                    channels: [channel],
-                    identity,
-                    options: {
-                        clientId,
-                        debug: false,
-                    },
-                    connection: {
-                        reconnect: this.shouldReconnect,
-                        secure: true,
-                    },
-                });
-
-
-                this.client.on('connected', () => {
-                    this.connected = true;
-                    this.emit('connected');
-                    resolve();
-                });
-
-                this.client.connect();
-            } else {
-                reject(new Error('ClientID or channel not specified.'));
+            if (username && accessToken) {
+                identity = {
+                    username,
+                    password: accessToken,
+                };
             }
+
+            this.client = new tmi.client({
+                channels: [channel],
+                identity,
+                options: {
+                    clientId,
+                    debug: false,
+                },
+                connection: {
+                    reconnect: this.shouldReconnect,
+                    secure: true,
+                },
+            });
+
+
+            this.client.on('connected', () => {
+                this.connected = true;
+                this.emit('connected');
+                resolve();
+            });
+
+            this.client.connect();
         });
     }
 
@@ -254,7 +255,7 @@ class Twitch extends Interface {
         const userId = this.getConfig('userId');
 
         if (!userId) {
-            throw new Error('User ID is not set.');
+            throw new Error('userId is not set.');
         }
 
         return await this.api('get', `chat/${userId}/badges`);
@@ -269,7 +270,7 @@ class Twitch extends Interface {
         const accessToken = this.getConfig('accessToken');
 
         if (!accessToken) {
-            throw new Error('Access token not set.');
+            throw new Error('accessToken not set.');
         }
 
         const { data } = await this.api('get', 'user');
@@ -385,7 +386,7 @@ class Twitch extends Interface {
         const clientId = this.getConfig('clientId');
 
         if (!clientId) {
-            throw new Error('Client ID not set.');
+            throw new Error('clientId not set.');
         }
 
         return await this.http.request({
