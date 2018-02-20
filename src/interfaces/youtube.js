@@ -297,7 +297,7 @@ class Youtube extends Interface {
      * @return {string}
      */
     getName() {
-        return 'Youtube';
+        return 'YouTube';
     }
 
     /**
