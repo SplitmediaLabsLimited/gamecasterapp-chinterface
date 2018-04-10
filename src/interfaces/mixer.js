@@ -23,7 +23,7 @@ class Mixer extends Interface {
 
         this.canSend = false;
         this.endpoints = [];
-        this.authKey = null;
+        this.activeEndpoint = 0;
 
         this.required = [
             'channelId',
@@ -55,8 +55,10 @@ class Mixer extends Interface {
 
         const { authkey: authKey, endpoints } = chats.data;
 
-        this.authKey = authKey;
         this.endpoints = endpoints;
+        if (authKey) {
+          this.setConfig('authKey', authKey);
+        }
 
         const url = await this.getChatServer();
         await this.connectToChat(url);
@@ -279,13 +281,14 @@ class Mixer extends Interface {
      */
     async getChatServer() {
         const endpoints = this.endpoints;
-        const endpoint = endpoints.entries().next();
+        const endpoint = endpoints[this.activeEndpoint];
+        this.activeEndpoint++;
 
-        if (endpoint.done) {
-            throw new Error('No more chat servers available.');
+        if (this.activeEndpoint === endpoints.length) {
+            this.activeEndpoint = 0;
         }
 
-        return endpoint.value.pop();
+        return endpoint;
     }
 
     /**

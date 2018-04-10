@@ -6,19 +6,19 @@ export default async function run() {
         userId: 7503472,
         channelId: 5862091,
         username: 'jonline',
-        accessToken: 'wskEQfQcfkjRyOo8yngswF6CBStVL6XpitjU0Ipb83MWwXtgloOqy1yEeRyIMBxl',
+        accessToken: 'GpmtYdJO7FPtwjktaSti7WG3hUC3AHE6Am0diIfi5l9LDOm7O1Wv5wGWfk290CaG',
     });
 
-    await twitch({
-        clientId: 'j9tphzlo1qk2dmzf1ovj81zktwujm5z',
-        channel: 'jonliney',
-        username: 'jonliney',
-        accessToken: 'vg2wq2r3ekj841sqoz4tacjai6lc85',
-    });
+    // await twitch({
+    //     clientId: 'j9tphzlo1qk2dmzf1ovj81zktwujm5z',
+    //     channel: 'jonliney',
+    //     username: 'jonliney',
+    //     accessToken: 'vg2wq2r3ekj841sqoz4tacjai6lc85',
+    // });
 
-    await youtube({
-        accessToken: 'ya29.GlxnBR610Pghngtwieiql5X-GWS3zEb77Yj-GgTWVn4So4sZQ-Mo7qUtmWYvkHtluNqcQWV_UejwHIn5cpJsRDdc4UywjYqx3LFSoRYsk8nQtBKAVKWfGXmiioISYA',
-    });
+    // await youtube({
+    //     accessToken: 'ya29.GlxnBR610Pghngtwieiql5X-GWS3zEb77Yj-GgTWVn4So4sZQ-Mo7qUtmWYvkHtluNqcQWV_UejwHIn5cpJsRDdc4UywjYqx3LFSoRYsk8nQtBKAVKWfGXmiioISYA',
+    // });
 }();
 
 async function twitch(config) {
@@ -40,6 +40,18 @@ async function twitch(config) {
         TwitchChat.on('connected', () => {
             console.log('Twitch chat is connected!');
         });
+
+        TwitchChat.on('emotesets', (sets, obj) => {
+            console.log(sets, obj);
+        });
+
+        setTimeout(() => {
+            TwitchChat.send('hi');
+        }, 2000);
+
+        setTimeout(() => {
+            TwitchChat.send('hi Kappa');
+        }, 4000);
     } catch (e) {
         console.error(e);
     }
@@ -65,6 +77,18 @@ async function mixer(config) {
         MixerChat.on('connected', () => {
             console.log('Mixer chat is connected!');
         });
+
+        MixerChat.on('error', e => {
+            console.log('error emit', e);
+        });
+
+        MixerChat.on('reconnect', e => {
+            console.log('reconnect', e);
+        });
+
+        setTimeout(() => {
+            MixerChat.send('hello');
+        }, 3000);
     } catch (e) {
         console.error(e);
     }
