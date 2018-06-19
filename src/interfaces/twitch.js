@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import tmi from '@cvpcasada/tmi.js';
+import tmi from 'twitch-js';
 import axios from 'axios';
 import Interface from './interface';
 
@@ -305,7 +305,7 @@ class Twitch extends Interface {
     }
 
     /**
-     * Returns the TMI instance.
+     * Returns the TwitchJS instance.
      *
      * @return {*}
      */
@@ -359,8 +359,8 @@ class Twitch extends Interface {
     }
 
     /**
-     * Pass-through function to listen to any supported event in TMI.
-     * https://docs.tmijs.org/v1.2.1/Events.html
+     * Pass-through function to listen to any supported event in TwitchJS.
+     * https://github.com/twitch-apis/twitch-js/blob/master/docs/Chat/Events.md
      *
      * @param {string} evnt
      * @param {*}      callback
