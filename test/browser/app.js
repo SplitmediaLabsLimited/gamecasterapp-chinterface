@@ -2,19 +2,19 @@ import axios from 'axios';
 const chinterface = require('../../../chinterface');
 
 export default async function run() {
-    await mixer({
-        userId: 7503472,
-        channelId: 5862091,
-        username: 'jonline',
-        accessToken: 'GpmtYdJO7FPtwjktaSti7WG3hUC3AHE6Am0diIfi5l9LDOm7O1Wv5wGWfk290CaG',
-    });
-
-    // await twitch({
-    //     clientId: 'j9tphzlo1qk2dmzf1ovj81zktwujm5z',
-    //     channel: 'jonliney',
-    //     username: 'jonliney',
-    //     accessToken: 'vg2wq2r3ekj841sqoz4tacjai6lc85',
+    // await mixer({
+    //     userId: 7503472,
+    //     channelId: 5862091,
+    //     username: 'jonline',
+    //     accessToken: 'GpmtYdJO7FPtwjktaSti7WG3hUC3AHE6Am0diIfi5l9LDOm7O1Wv5wGWfk290CaG',
     // });
+
+    await twitch({
+        clientId: 'j9tphzlo1qk2dmzf1ovj81zktwujm5z',
+        channel: 'jonliney',
+        username: 'jonliney',
+        accessToken: 'vg2wq2r3ekj841sqoz4tacjai6lc85',
+    });
 
     // await youtube({
     //     accessToken: 'ya29.GlxnBR610Pghngtwieiql5X-GWS3zEb77Yj-GgTWVn4So4sZQ-Mo7qUtmWYvkHtluNqcQWV_UejwHIn5cpJsRDdc4UywjYqx3LFSoRYsk8nQtBKAVKWfGXmiioISYA',

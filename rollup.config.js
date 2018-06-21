@@ -111,8 +111,7 @@ export default {
     targets: getTarget(env, pkg.name),
     plugins,
     globals: {
-        '@cvpcasada/tmi.js': 'tmi',
-        'tmi.js': 'tmi',
+        'twitch-js': 'tmi',
         'axios': 'axios'
     },
     sourceMap: true
