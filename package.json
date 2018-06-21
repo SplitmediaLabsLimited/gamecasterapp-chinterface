@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.common.js",
   "module": "dist/chinterface.es.js",
@@ -11,7 +11,8 @@
     "test:watch": "npm run test -- --watch",
     "flow": "flow check",
     "flow:watch": "flow-watch",
-    "format": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'"
+    "format": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'",
+    "prepublish": "yarn run build"
   },
   "devDependencies": {
     "axios": "^0.16.2",
