@@ -8,9 +8,6 @@
 import twitch from '../interfaces/twitch';
 import mixer from '../interfaces/mixer';
 import youtube from '../interfaces/youtube';
+import facebook from '../interfaces/facebook';
 
-export {
-    twitch,
-    mixer,
-    youtube,
-};
+export { twitch, mixer, youtube, facebook };
