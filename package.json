@@ -6,7 +6,9 @@
   "module": "dist/chinterface.es.js",
   "scripts": {
     "build": "clear && rm -rf ./dist/*.* && rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
-    "build:watch": "clear && rm -rf ./dist/*.* && rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION -w",
+    "build:watch": "clear && rm rf ./dist/*.* && rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION -w",
+    "buildWindows": "cls && rmdir /S /Q dist && rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION",
+    "buildWindows:watch": "cls && rmdir /S /Q dist && rollup -c && rollup -c --environment ESBUNDLE && rollup -c --environment PRODUCTION -w",
     "test": "jest",
     "test:watch": "npm run test -- --watch",
     "flow": "flow check",

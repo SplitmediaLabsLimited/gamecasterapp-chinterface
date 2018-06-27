@@ -57,8 +57,6 @@ class Facebook extends Interface {
     const commentRate = this.getConfig('commentRate', 'one_hundred_per_second');
     const fields = this.fields.join(',');
 
-    await this.loadUser();
-
     const urlMain = [
       'https://streaming-graph.facebook.com',
       liveVideoId,
@@ -206,7 +204,7 @@ class Facebook extends Interface {
       extra: {
         user_id,
         image,
-        broadcaster: user_id === broadcasterId
+        broadcaster: +user_id === +broadcasterId
       }
     });
   }
@@ -332,7 +330,7 @@ class Facebook extends Interface {
   }
 
   /**
-   * Query the Twitch API for a given method, endpoint and query param.
+   * Query the Facebook Graph API for a given method, endpoint and query param.
    *
    * @param {string} method
    * @param {string} url
