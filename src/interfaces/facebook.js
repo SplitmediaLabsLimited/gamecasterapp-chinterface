@@ -157,24 +157,26 @@ class Facebook extends Interface {
     const liveVideoId = this.getConfig('liveVideoId');
     const accessToken = this.getConfig('accessToken');
 
-    return this.api(
+    const { data } = await this.api(
       'post',
       `${liveVideoId}/comments?access_token=${accessToken}`,
       { message }
-    ).then(id => {
-      id = `${id}`.replace(`${liveVideoId}_`, '');
+    );
 
-      this.msgEvent({
-        data: JSON.stringify({
-          id,
-          from: {
-            id: this.getConfig('userId'),
-            name: this.getConfig('username')
-          },
-          message,
-          created_time: new Date().getTime()
-        })
-      });
+    let { id } = data;
+
+    id = `${id}`.replace(`${liveVideoId}_`, '');
+
+    this.msgEvent({
+      data: JSON.stringify({
+        id,
+        from: {
+          id: this.getConfig('userId'),
+          name: this.getConfig('username')
+        },
+        message,
+        created_time: new Date().getTime()
+      })
     });
   }
 
