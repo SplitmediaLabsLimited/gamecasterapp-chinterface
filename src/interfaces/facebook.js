@@ -9,7 +9,6 @@ import axios from 'axios';
 import Interface from './interface';
 
 const CODE_500_SERVER_ERROR = 500;
-const CONNECTION_TIMEOUT = 1000;
 
 class Facebook extends Interface {
   /**
@@ -17,8 +16,6 @@ class Facebook extends Interface {
    */
   constructor() {
     super();
-
-    this.sentMessageIdFilter = [];
 
     this.canSend = false;
 
@@ -40,7 +37,6 @@ class Facebook extends Interface {
       'object'
     ];
 
-    this.connectionTimeOut = '';
     this.reConnectionTimeOut = '';
   }
 
@@ -75,40 +71,11 @@ class Facebook extends Interface {
   }
 
   /**
-   * Checks if stream is available, then connect
-   *
-   * @param {string} url
-   */
-  tryConnect(url) {
-    axios.get(url).catch(({ response }) => {
-      clearTimeout(this.connectionTimeOut);
-
-      this.emit('error', response);
-      if (+response.status === CODE_500_SERVER_ERROR) {
-        if (this.shouldReconnect) {
-          this.increaseReconnect();
-          this.emit('reconnect', this.reconnectAttempt);
-
-          this.reConnectionTimeOut = setTimeout(
-            () => this.tryConnect(url),
-            this.reconnectCurrentInterval
-          );
-        }
-      }
-    });
-
-    this.connectionTimeOut = setTimeout(
-      () => this.connectToLiveVideo(url),
-      CONNECTION_TIMEOUT
-    );
-  }
-
-  /**
    * Connects to Event Source
    *
    * @param {string} url
    */
-  connectToLiveVideo(url) {
+  tryConnect(url) {
     const es = new EventSource(url);
 
     es.onopen = () => {
@@ -118,7 +85,28 @@ class Facebook extends Interface {
     };
 
     es.onmessage = this.msgEvent.bind(this);
-    es.onerror = e => this.emit('error', e);
+
+    es.onerror = e => {
+      if (e.target.readyState === es.CLOSED) {
+        axios.get(url).catch(({ response }) => {
+          if (+response.status === CODE_500_SERVER_ERROR) {
+            if (this.shouldReconnect) {
+              this.increaseReconnect();
+              this.emit('reconnect', this.reconnectAttempt);
+
+              this.reConnectionTimeOut = setTimeout(
+                () => this.tryConnect(url),
+                this.reconnectCurrentInterval
+              );
+            }
+          }
+          this.emit('error', response);
+        });
+        return;
+      }
+
+      this.emit('error', e);
+    };
 
     this.es = es;
   }
@@ -127,7 +115,6 @@ class Facebook extends Interface {
    * Disconnecs the Event Source
    */
   disconnect() {
-    clearTimeout(this.connectionTimeOut);
     clearTimeout(this.reConnectionTimeOut);
 
     if (this.es && this.es.close) {
@@ -157,27 +144,15 @@ class Facebook extends Interface {
     const liveVideoId = this.getConfig('liveVideoId');
     const accessToken = this.getConfig('accessToken');
 
-    const { data } = await this.api(
-      'post',
-      `${liveVideoId}/comments?access_token=${accessToken}`,
-      { message }
-    );
-
-    let { id } = data;
-
-    id = `${id}`.replace(`${liveVideoId}_`, '');
-
-    this.msgEvent({
-      data: JSON.stringify({
-        id,
-        from: {
-          id: this.getConfig('userId'),
-          name: this.getConfig('username')
-        },
-        message,
-        created_time: new Date().getTime()
-      })
-    });
+    try {
+      await this.api(
+        'post',
+        `${liveVideoId}/comments?access_token=${accessToken}`,
+        { message }
+      );
+    } catch (e) {
+      this.emit('error', e);
+    }
   }
 
   /**
@@ -193,10 +168,6 @@ class Facebook extends Interface {
 
     const broadcasterId = this.getConfig('userId');
 
-    if (this.isDuplicateMessage(user_id, broadcasterId, id)) {
-      return;
-    }
-
     this.emit('message', {
       id,
       body,
@@ -209,29 +180,6 @@ class Facebook extends Interface {
         broadcaster: +user_id === +broadcasterId
       }
     });
-  }
-
-  /**
-   * Filters duplicate message received from
-   * graph API callback and event source
-   *
-   * @param {int} user_id
-   * @param {int} broadcasterId
-   * @param {int} id
-   */
-  isDuplicateMessage(user_id, broadcasterId, id) {
-    if (user_id === broadcasterId) {
-      if (this.sentMessageIdFilter.includes(`${id}`)) {
-        return true;
-      }
-
-      this.sentMessageIdFilter.push(`${id}`);
-      if (this.sentMessageIdFilter.length > 5) {
-        this.sentMessageIdFilter.shift();
-      }
-    }
-
-    return false;
   }
 
   /**
