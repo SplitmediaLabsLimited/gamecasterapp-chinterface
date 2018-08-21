@@ -142,7 +142,14 @@ class Mixer extends Interface {
             message,
             user_name : username,
         } = data;
+        const messageMeta = message.meta;
         let body = null;
+
+        // A censored message is one that is automatically removed by Mixer, if enabled.
+        // Streamers and mods can "restore" a message. When it is restored, meta.censored is omitted.
+        if (messageMeta.hasOwnProperty('censored') && messageMeta.censored) {
+            return;
+        }
 
         if (formatMessages) {
             body = JSON.parse(JSON.stringify(message.message));
@@ -168,7 +175,7 @@ class Mixer extends Interface {
             body = body.reduce((text, item) => `${text}${item}`, '');
         }
 
-        this.emit('message', {
+        const payload = {
             username,
             id,
             body,
@@ -180,7 +187,13 @@ class Mixer extends Interface {
                 user_id,
                 user_avatar,
             }
-        })
+        };
+
+        if (messageMeta.hasOwnProperty('whisper') && messageMeta.whisper) {
+            this.emit('whisper', payload);
+        } else {
+            this.emit('message', payload);
+        }
     }
 
     /**
