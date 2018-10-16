@@ -6,6 +6,7 @@
  */
 
 import Helpers from './../utils/helpers';
+import HtmlEntities from 'html-entities';
 
 class Interface {
 
@@ -258,6 +259,15 @@ class Interface {
     resetReconnect() {
         this.reconnectCurrentInterval = this.reconnectDefaultInterval;
         this.reconnectAttempt = 0;
+    }
+
+    /**
+    *
+    * @param message
+    * @return {*}
+    */
+    filterXSS(message) {
+        return HtmlEntities.AllHtmlEntities.encode(message);
     }
 }
 

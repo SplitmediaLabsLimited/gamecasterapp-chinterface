@@ -164,7 +164,8 @@ class Facebook extends Interface {
     const { id, from, message, created_time } = JSON.parse(data);
 
     const { username, user_id, image } = this.getUserInfo(from);
-    const body = this.parseMessage(message);
+    let body = this.filterXSS(message);
+    body = this.parseMessage(body);
 
     const broadcasterId = this.getConfig('userId');
 

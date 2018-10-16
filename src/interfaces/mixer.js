@@ -6,7 +6,6 @@
  */
 
 import axios from 'axios';
-import HtmlEntities from 'html-entities';
 import Interface from './interface';
 
 class Mixer extends Interface {
@@ -70,7 +69,9 @@ class Mixer extends Interface {
     async disconnect() {
         super.disconnect();
 
-        this.ws.close();
+        if (this.ws !== null) {
+            this.ws.close();
+        }
     }
 
     /**
@@ -166,7 +167,7 @@ class Mixer extends Interface {
                         }
                         break;
                     case 'text':
-                        item.text = HtmlEntities.AllHtmlEntities.encode(item.text);
+                        item.text = this.filterXSS(item.text);
                         break;
                 }
 

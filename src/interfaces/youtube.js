@@ -134,7 +134,6 @@ class Youtube extends Interface {
 
             this.messagesId.push(id);
 
-            let body = null;
             let message = snippet.displayMessage || '';
             let extra = {
                 type: snippet.type,
@@ -169,6 +168,8 @@ class Youtube extends Interface {
                     this.emit('chat-ended');
                     return;
             }
+
+            let body = this.filterXSS(message);
 
             if (this.getConfig('formatMessages')) {
                 body = this.parseUrl(message);

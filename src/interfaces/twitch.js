@@ -83,7 +83,10 @@ class Twitch extends Interface {
     disconnect() {
         super.disconnect();
 
-        this.client.disconnect();
+        if (this.client !== null) {
+            this.client.disconnect();
+        }
+
         this.client = null;
         this.connected = false;
     }
@@ -166,16 +169,9 @@ class Twitch extends Interface {
             formatMessages &&
             this.shouldParseEmoticons
         ) {
-            /**
-             * TODO: Add html entity processing.
-             *
-             * Notes...
-             *
-             * 1. Replace all emoticons with a unique random string.
-             * 2. Process html entites.
-             * 3. Replace all unique strings with the image element.
-             */
             body = this.parseEmoticons(message, emotes);
+        } else {
+            body = this.filterXSS(message);
         }
 
         this.emit('message', {
@@ -204,11 +200,10 @@ class Twitch extends Interface {
      */
     parseEmoticons(message, rawEmotes) {
         if (rawEmotes === undefined || rawEmotes === null) {
-            return message;
+            return this.filterXSS(message);
         }
 
         const rawKeys = Object.keys(rawEmotes);
-        let offset = 0;
         let newMessage = message;
         let emotes = {};
 
@@ -218,29 +213,18 @@ class Twitch extends Interface {
             rawEmotes[key].forEach(p => {
                 const split = p.split('-');
                 const start = parseInt(split[0]);
+                const end = parseInt(split[1]) + 1;
 
-                emotes[start] = {
-                    start,
-                    end: parseInt(split[1]),
-                    key,
-                };
+                emotes[message.substring(start, end)] = `<img class="emoticon" src="https://static-cdn.jtvnw.net/emoticons/v1/${key}/1.0" />`;
             });
         });
 
+        newMessage = this.filterXSS(newMessage);
+
         let keys = Object.keys(emotes);
-
-        keys.sort((a, b) => a - b);
-
         keys.forEach(k => {
-            const { start, end, key } = emotes[k];
-            const length = (end - start) + 1;
-            const left = newMessage.substring(0, start + offset);
-            const middle = `<img class="emoticon" src="https://static-cdn.jtvnw.net/emoticons/v1/${key}/1.0" />`;
-            const right = newMessage.substring(end + 1 + offset);
-
-            offset += middle.length - length;
-
-            newMessage = `${left}${middle}${right}`;
+            const reg = new RegExp(k, 'g');
+            newMessage = newMessage.replace(reg, emotes[k]);
         });
 
         return newMessage;

@@ -46,12 +46,8 @@ async function twitch(config) {
         });
 
         setTimeout(() => {
-            TwitchChat.send('hi');
+            TwitchChat.send('hi <script>console.log("hi");</script> how are you?');
         }, 2000);
-
-        setTimeout(() => {
-            TwitchChat.send('hi Kappa');
-        }, 4000);
     } catch (e) {
         console.error(e);
     }
