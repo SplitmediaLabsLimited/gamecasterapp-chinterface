@@ -112,7 +112,8 @@ export default {
     plugins,
     globals: {
         'twitch-js': 'tmi',
-        'axios': 'axios'
+        'axios': 'axios',
+        'html-entities': 'html-entities'
     },
     sourceMap: true
 };

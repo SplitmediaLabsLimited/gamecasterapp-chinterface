@@ -41,13 +41,12 @@ async function twitch(config) {
             console.log('Twitch chat is connected!');
         });
 
-        TwitchChat.on('emotesets', (sets, obj) => {
-            console.log(sets, obj);
-        });
-
         setTimeout(() => {
             TwitchChat.send('hi <script>console.log("hi");</script> how are you?');
         }, 2000);
+        setTimeout(() => {
+            TwitchChat.send(':)');
+        }, 3000);
     } catch (e) {
         console.error(e);
     }

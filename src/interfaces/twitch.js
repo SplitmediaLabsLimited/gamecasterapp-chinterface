@@ -207,6 +207,7 @@ class Twitch extends Interface {
         let newMessage = message;
         let emotes = {};
 
+        // Loop through each emote key (eg. Kappa) and create an array of emote keys mapped to their <img> equivalent
         rawKeys.forEach(key => {
             key = parseInt(key);
 
@@ -219,12 +220,17 @@ class Twitch extends Interface {
             });
         });
 
+        // Filter the message for any XSS
         newMessage = this.filterXSS(newMessage);
 
         let keys = Object.keys(emotes);
-        keys.forEach(k => {
-            const reg = new RegExp(k, 'g');
-            newMessage = newMessage.replace(reg, emotes[k]);
+        keys.forEach(key => {
+            // Escape the emote in the event it's a smiley face
+            const keyEscaped = key.replace(/[-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+            const reg = new RegExp(keyEscaped, 'g');
+
+            // Replace all instances of each emote with its <img> equivalent
+            newMessage = newMessage.replace(reg, emotes[key]);
         });
 
         return newMessage;
