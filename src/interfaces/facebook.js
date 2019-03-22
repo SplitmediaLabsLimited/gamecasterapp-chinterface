@@ -358,4 +358,4 @@ class Facebook extends Interface {
   }
 }
 
-export default new Facebook();
+export default Facebook;

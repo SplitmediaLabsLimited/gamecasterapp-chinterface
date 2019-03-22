@@ -424,4 +424,4 @@ class Mixer extends Interface {
 
 }
 
-export default new Mixer();
+export default Mixer;

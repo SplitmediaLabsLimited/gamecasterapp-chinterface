@@ -404,4 +404,4 @@ class Twitch extends Interface {
     }
 }
 
-export default new Twitch();
+export default Twitch;

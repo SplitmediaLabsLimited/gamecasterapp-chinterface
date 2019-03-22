@@ -338,4 +338,4 @@ class Youtube extends Interface {
     }
 }
 
-export default new Youtube();
+export default Youtube;

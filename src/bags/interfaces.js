@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import twitch from '../interfaces/twitch';
-import mixer from '../interfaces/mixer';
-import youtube from '../interfaces/youtube';
-import facebook from '../interfaces/facebook';
+import { default as twitch } from '../interfaces/twitch';
+import { default as mixer }  from '../interfaces/mixer';
+import { default as youtube }  from '../interfaces/youtube';
+import { default as facebook }  from '../interfaces/facebook';
 
-export { twitch, mixer, youtube, facebook };
+
+export { twitch , mixer, youtube, facebook };
