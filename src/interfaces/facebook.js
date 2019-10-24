@@ -34,7 +34,6 @@ class Facebook extends Interface {
       'from',
       'message',
       'message_tags',
-      'object'
     ];
 
     this.reConnectionTimeOut = '';
