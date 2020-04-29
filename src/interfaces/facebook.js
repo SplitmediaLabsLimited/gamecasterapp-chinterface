@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import axios from 'axios';
+import axios from '../utils/axios';
 import Interface from './interface';
 
 const CODE_500_SERVER_ERROR = 500;
@@ -22,7 +22,7 @@ class Facebook extends Interface {
     this.setConfig({
       version: 'v3.0',
       parseUrl: true,
-      reconnect: true
+      reconnect: true,
     });
 
     this.required = ['liveVideoId', 'accessToken'];
@@ -55,13 +55,13 @@ class Facebook extends Interface {
     const urlMain = [
       'https://streaming-graph.facebook.com',
       liveVideoId,
-      'live_comments'
+      'live_comments',
     ].join('/');
 
     const params = [
       `access_token=${accessToken}`,
       `comment_rate=${commentRate}`,
-      `fields=${fields}`
+      `fields=${fields}`,
     ].join('&');
 
     const url = `${urlMain}?${params}`;
@@ -85,7 +85,7 @@ class Facebook extends Interface {
 
     es.onmessage = this.msgEvent.bind(this);
 
-    es.onerror = e => {
+    es.onerror = (e) => {
       if (e.target.readyState === es.CLOSED) {
         axios.get(url).catch(({ response }) => {
           if (+response.status === CODE_500_SERVER_ERROR) {
@@ -177,8 +177,8 @@ class Facebook extends Interface {
       extra: {
         user_id,
         image,
-        broadcaster: +user_id === +broadcasterId
-      }
+        broadcaster: +user_id === +broadcasterId,
+      },
     });
   }
 
@@ -191,7 +191,7 @@ class Facebook extends Interface {
     const userObj = {
       user_id: id || 0,
       username: name || 'Anonymous',
-      image: ''
+      image: '',
     };
 
     if (id) {
@@ -226,7 +226,7 @@ class Facebook extends Interface {
 
     return message.replace(
       regex,
-      match => `<a href='${match}' class='link'>${match}</a>`
+      (match) => `<a href='${match}' class='link'>${match}</a>`
     );
   }
 
@@ -244,7 +244,7 @@ class Facebook extends Interface {
     const { data } = await this.api('get', `me`, {
       fields: 'id,name,metadata{type}',
       metadata: 1,
-      access_token: accessToken
+      access_token: accessToken,
     });
 
     const { id: userId, name: username, metadata } = data;
@@ -255,7 +255,7 @@ class Facebook extends Interface {
 
     this.setConfig({
       userId,
-      username
+      username,
     });
   }
 
@@ -272,7 +272,8 @@ class Facebook extends Interface {
 
     if (version) {
       this.http = axios.create({
-        baseURL: `https://graph.facebook.com/${version}/`
+        baseURL: `https://graph.facebook.com/${version}/`,
+        responseType: 'json',
       });
     }
 
@@ -307,7 +308,7 @@ class Facebook extends Interface {
     return await this.http.request({
       method,
       url,
-      data
+      data: method === 'get' ? undefined : data,
     });
   }
 

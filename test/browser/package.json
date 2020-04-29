@@ -1,21 +1,19 @@
 {
   "name": "browser",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
+  "author": "cvpcasada",
+  "license": "MIT",
   "scripts": {
-    "dev": "NODE_ENV=development node_modules/webpack/bin/webpack.js --progress --hide-modules --config=node_modules/laravel-mix/setup/webpack.config.js",
-    "watch": "NODE_ENV=development node_modules/webpack/bin/webpack.js --watch --progress --hide-modules --config=node_modules/laravel-mix/setup/webpack.config.js",
-    "hot": "NODE_ENV=development webpack-dev-server --inline --hot --config=node_modules/laravel-mix/setup/webpack.config.js",
-    "production": "NODE_ENV=production node_modules/webpack/bin/webpack.js --progress --hide-modules --config=node_modules/laravel-mix/setup/webpack.config.js"
+    "watch": "parcel  -p 8080 watch index.html"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
-    "laravel-mix": "^2.0.0"
+    "parcel-bundler": "^1.12.4"
   },
+  "browserslist": [
+    "chrome 69"
+  ],
   "dependencies": {
-    "axios": "^0.17.1"
+    "tmi.js": "^1.5.0"
   }
 }
