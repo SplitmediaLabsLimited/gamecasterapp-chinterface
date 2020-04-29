@@ -195,7 +195,10 @@ class Facebook extends Interface {
     };
 
     if (id) {
-      userObj.image = `${this.http.defaults.baseURL}${id}/picture`;
+      userObj.image = `https://graph.facebook.com/${this.getConfig(
+        'version',
+        'v3.0'
+      )}/${id}/picture`;
     }
 
     return userObj;
@@ -289,25 +292,12 @@ class Facebook extends Interface {
    *
    * @return {Promise}
    */
-  async api(method, url, data = {}) {
-    if (method === 'get') {
-      const params = Object.keys(data)
-        .reduce((arr, key) => {
-          const value = data[key];
-
-          arr.push(`${key}=${value}`);
-
-          return arr;
-        }, [])
-        .join('&');
-
-      url = `${url}?${params}`;
-      data = {};
-    }
-
-    return await this.http.request({
+  api(method, url, data = {}) {
+    return this.http.request({
       method,
-      url,
+      url:
+        url +
+        (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
       data: method === 'get' ? undefined : data,
     });
   }

@@ -8,7 +8,7 @@
   "scripts": {
     "build": "microbundle --globals tmi.js=tmi -f modern,umd",
     "format": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'",
-    "prepublish": "yarn run build"
+    "prepare": "yarn run build"
   },
   "devDependencies": {
     "cross-env": "^5.0.2",

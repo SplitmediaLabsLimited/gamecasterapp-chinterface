@@ -371,7 +371,9 @@ class Mixer extends Interface {
   api(method, url, data = {}) {
     return this.http.request({
       method,
-      url,
+      url:
+        url +
+        (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
       data: method === 'get' ? undefined : data,
     });
   }

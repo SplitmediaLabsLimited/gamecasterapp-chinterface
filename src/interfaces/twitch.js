@@ -364,16 +364,18 @@ class Twitch extends Interface {
    *
    * @return {Promise}
    */
-  async api(method, url, data = {}) {
+  api(method, url, data = {}) {
     const clientId = this.getConfig('clientId');
 
     if (!clientId) {
       throw new Error('clientId not set.');
     }
 
-    return await this.http.request({
+    return this.http.request({
       method,
-      url,
+      url:
+        url +
+        (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
       data: method === 'get' ? undefined : data,
     });
   }

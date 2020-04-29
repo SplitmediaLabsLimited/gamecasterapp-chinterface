@@ -111,7 +111,7 @@ class Youtube extends Interface {
     this.nextPageToken = nextPageToken;
     this.handleMessages(items);
 
-    const intervalConfig = parseInt(this.getConfig('interval'));
+    const intervalConfig = parseInt(this.getConfig('interval'), 10);
     const interval =
       pollingIntervalMillis > intervalConfig
         ? pollingIntervalMillis
@@ -173,7 +173,6 @@ class Youtube extends Interface {
         case 'chatEndedEvent':
           this.emit('chat-ended');
           return;
-        default:
       }
 
       let body = this.filterXSS(message);
@@ -262,23 +261,19 @@ class Youtube extends Interface {
    */
   async api(method, url, data = {}) {
     const accessToken = this.getConfig('accessToken');
-    let request = {
-      method,
-      url,
-    };
 
     if (!accessToken) {
       throw new Error('accessToken not set.');
     }
 
-    if (method === 'get') {
-      request.params = data;
-    } else {
-      request.data = data;
-    }
-
     try {
-      return await this.http.request(request);
+      return await this.http.request({
+        method,
+        url:
+          url +
+          (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
+        data: method === 'get' ? undefined : data,
+      });
     } catch (response) {
       const { error } = await response.json();
 
