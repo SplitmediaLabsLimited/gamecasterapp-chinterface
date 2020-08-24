@@ -44,6 +44,8 @@ class Youtube extends Interface {
 
       await this.fetchMessages();
     } catch (e) {
+      clearInterval(this.fetchInterval);
+
       throw new Error(e);
     }
   }
@@ -71,6 +73,7 @@ class Youtube extends Interface {
     }
 
     const liveChatId = this.getConfig('liveChatId');
+
     const { data } = await this.api(
       'post',
       'liveChat/messages?part=snippet,authorDetails',
@@ -86,6 +89,37 @@ class Youtube extends Interface {
     );
 
     this.handleMessages([data]);
+
+  }
+
+  _fetchMessages = async () => {
+    try {
+      const liveChatId = this.getConfig('liveChatId');
+      const maxResults = this.getConfig('maxResults');
+      const profileImageSize = this.getConfig('profileImageSize');
+      const pageToken = this.nextPageToken ? this.nextPageToken : '';
+
+      const { data } = await this.api('get', 'liveChat/messages', {
+        part: 'snippet,authorDetails',
+        profileImageSize,
+        liveChatId,
+        maxResults,
+        pageToken,
+      });
+      const { items, nextPageToken, pollingIntervalMillis } = data;
+
+      this.nextPageToken = nextPageToken;
+      this.handleMessages(items);
+
+      const intervalConfig = parseInt(this.getConfig('interval'), 10);
+
+      return pollingIntervalMillis > intervalConfig
+        ? pollingIntervalMillis
+        : intervalConfig;
+
+    } catch (error) {
+      this.checkError(error);
+    }
   }
 
   /**
@@ -94,34 +128,8 @@ class Youtube extends Interface {
    * @return {Promise}
    */
   async fetchMessages() {
-    const liveChatId = this.getConfig('liveChatId');
-    const maxResults = this.getConfig('maxResults');
-    const profileImageSize = this.getConfig('profileImageSize');
-    const pageToken = this.nextPageToken ? this.nextPageToken : '';
-
-    const { data } = await this.api('get', 'liveChat/messages', {
-      part: 'snippet,authorDetails',
-      profileImageSize,
-      liveChatId,
-      maxResults,
-      pageToken,
-    });
-    const { items, nextPageToken, pollingIntervalMillis } = data;
-
-    this.nextPageToken = nextPageToken;
-    this.handleMessages(items);
-
-    const intervalConfig = parseInt(this.getConfig('interval'), 10);
-    const interval =
-      pollingIntervalMillis > intervalConfig
-        ? pollingIntervalMillis
-        : intervalConfig;
-
-    if (this.connected) {
-      this.fetchInterval = setTimeout(() => {
-        this.fetchMessages();
-      }, interval);
-    }
+    const interval = await this._fetchMessages();
+    this.fetchInterval = setInterval(this._fetchMessages, interval);
   }
 
   /**
@@ -277,9 +285,7 @@ class Youtube extends Interface {
     } catch (response) {
       const { error } = await response.json();
 
-      this.checkError(error);
-
-      throw new Error(error.errors[0].reason);
+      throw error;
     }
   }
 
