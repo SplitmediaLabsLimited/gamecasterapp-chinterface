@@ -20,7 +20,7 @@ class Facebook extends Interface {
     this.canSend = false;
 
     this.setConfig({
-      version: 'v3.0',
+      version: 'v3.3',
       parseUrl: true,
       reconnect: true,
     });
