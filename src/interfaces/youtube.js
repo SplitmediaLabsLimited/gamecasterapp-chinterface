@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import axios from '../utils/axios';
+import axios from 'redaxios';
 import Interface from './interface';
 
 class Youtube extends Interface {
   messagesId = [];
-  fetchInterval;
+  fetchTimeout;
   nextPageToken;
 
   /**
@@ -41,11 +41,8 @@ class Youtube extends Interface {
     try {
       this.connected = true;
       this.emit('connected');
-
-      await this.fetchMessages();
+      this.fetchMessages();
     } catch (e) {
-      clearInterval(this.fetchInterval);
-
       throw new Error(e);
     }
   }
@@ -57,7 +54,7 @@ class Youtube extends Interface {
     super.disconnect();
 
     this.connected = false;
-    clearInterval(this.fetchInterval);
+    clearTimeout(this.fetchTimeout);
 
     this.emit('disconnected');
   }
@@ -111,14 +108,15 @@ class Youtube extends Interface {
       this.nextPageToken = nextPageToken;
       this.handleMessages(items);
 
-      const intervalConfig = parseInt(this.getConfig('interval'), 10);
+      const interval = parseInt(this.getConfig('interval'), 10);
 
-      return pollingIntervalMillis > intervalConfig
+      this.fetchTimeout = setTimeout(this._fetchMessages, pollingIntervalMillis > interval
         ? pollingIntervalMillis
-        : intervalConfig;
+        : interval);
 
     } catch (error) {
       this.checkError(error);
+      clearTimeout(this.fetchTimeout);
     }
   }
 
@@ -127,9 +125,9 @@ class Youtube extends Interface {
    *
    * @return {Promise}
    */
-  async fetchMessages() {
-    const interval = await this._fetchMessages();
-    this.fetchInterval = setInterval(this._fetchMessages, interval);
+  fetchMessages() {
+    const interval = parseInt(this.getConfig('interval'), 10);
+    this.fetchTimeout = setTimeout(this._fetchMessages, interval);
   }
 
   /**

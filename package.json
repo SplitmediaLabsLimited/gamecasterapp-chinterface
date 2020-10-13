@@ -34,5 +34,8 @@
   ],
   "author": "Gamecaster",
   "license": "MIT",
-  "homepage": ""
+  "homepage": "",
+  "dependencies": {
+    "redaxios": "^0.3.0"
+  }
 }

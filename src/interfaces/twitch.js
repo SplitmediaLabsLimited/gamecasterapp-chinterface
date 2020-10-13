@@ -6,7 +6,7 @@
  */
 
 import tmi from 'tmi.js';
-import axios from '../utils/axios';
+import axios from 'redaxios';
 import Interface from './interface';
 
 class Twitch extends Interface {

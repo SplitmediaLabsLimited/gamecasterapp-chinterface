@@ -8,10 +8,6 @@ A unified interface for Chats around the world.
 - YouTube (Read/Write)
 - Facebook Live (Read/Write)
 
-## Planned Services
-
-- Dailymotion
-
 ## Notes
 
 It is recommend to apply the following styles to emotes across all services.

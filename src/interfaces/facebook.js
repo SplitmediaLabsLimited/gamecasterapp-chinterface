@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import axios from '../utils/axios';
+import axios from 'redaxios';
 import Interface from './interface';
 
 const CODE_500_SERVER_ERROR = 500;
