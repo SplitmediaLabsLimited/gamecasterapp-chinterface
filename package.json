@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "2.5.1-pre.2",
+  "version": "2.6.0",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.js",
   "umd:main": "dist/chinterface.umd.js",
