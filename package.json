@@ -1,14 +1,13 @@
 {
   "name": "chinterface",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.js",
-  "umd:main": "dist/chinterface.umd.js",
-  "module": "dist/chinterface.es.js",
-  "esmodule": "dist/chinterface.modern.js",
+  "unpkg": "dist/chinterface.umd.js",
+  "module": "dist/chinterface.modern.js",
   "source": "src/chat.js",
   "scripts": {
-    "build": "microbundle --globals tmi.js=tmi",
+    "build": "microbundle --globals tmi.js=tmi -f modern,cjs,umd",
     "format": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'",
     "prepare": "yarn run build"
   },
@@ -26,15 +25,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://git.player.me/player/chinterface-v2.git"
+    "url": "https://github.com/gamecasterapp/chinterface.git"
   },
   "keywords": [
     "Chat",
     "Twitch",
-    "Youtube",
-    "Mixer"
+    "Youtube"
   ],
-  "author": "SplitmediaLabs Limited",
+  "author": "Gamecaster",
   "license": "MIT",
   "homepage": ""
 }

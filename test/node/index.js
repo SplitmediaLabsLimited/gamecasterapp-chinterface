@@ -12,13 +12,6 @@ app.get('/', async (req, res) => {
         accessToken: 'vg2wq2r3ekj841sqoz4tacjai6lc85',
     });
 
-    mixer({
-        userId: 7503472,
-        channelId: 5862091,
-        username: 'jonline',
-        accessToken: 'wskEQfQcfkjRyOo8yngswF6CBStVL6XpitjU0Ipb83MWwXtgloOqy1yEeRyIMBxl',
-    });
-
     youtube({
         accessToken: 'ya29.GlxnBa6hf2jQGtAJXyy1ENzdD782r__UkIViukyJbiQclyr23pH64B0zeZClfGNm3Au9IDb-xpljkxWVfY4EZQcPTKgdcJuS8V4ERe68be1t0IeHEa4ZyXq_-KTUXA',
     });
@@ -44,28 +37,6 @@ async function twitch(config) {
         });
     } catch (err) {
         console.error(err);
-    }
-}
-
-async function mixer(config) {
-    const MixerChat = chinterface.service('mixer');
-
-    try {
-        MixerChat.on('connected', () => {
-            console.log('Mixer chat is connected!');
-        });
-
-        await MixerChat.setWebSocket(uws);
-        await MixerChat.setConfig(config);
-        await MixerChat.loadUser();
-        await MixerChat.connect();
-
-
-        MixerChat.on('message', data => {
-            console.log('MIXER - [New Message]', data);
-        });
-    } catch (e) {
-        console.error(e);
     }
 }
 
