@@ -159,8 +159,18 @@ class Facebook extends Interface {
    *
    * @param {object} data
    */
-  msgEvent({ data }) {
-    const { id, from, message, created_time } = JSON.parse(data);
+  msgEvent(event) {
+    const { id, from, message, created_time } = JSON.parse(event.data);
+
+    // invariant error...
+    if (!from) {
+      throw Object.assign(
+        new Error(
+          'Chinterface(facebook): Invalid data received from event source'
+        ),
+        event
+      );
+    }
 
     const { username, user_id, image } = this.getUserInfo(from);
     let body = this.filterXSS(message);
