@@ -7,6 +7,7 @@
 
 import axios from 'redaxios';
 import Interface from './interface';
+import Debug from '../utils/debug';
 
 const CODE_500_SERVER_ERROR = 500;
 
@@ -76,7 +77,7 @@ class Facebook extends Interface {
    */
   tryConnect(url) {
     const es = new EventSource(url);
-
+    Debug;
     es.onopen = () => {
       this.connected = true;
       this.emit('connected');
@@ -164,12 +165,12 @@ class Facebook extends Interface {
 
     // invariant error...
     if (!from) {
-      throw Object.assign(
-        new Error(
-          'Chinterface(facebook): Invalid data received from event source'
-        ),
+      console.error(
+        `Chinterface(facebook): No data received from SSE event`,
         event
       );
+
+      return;
     }
 
     const { username, user_id, image } = this.getUserInfo(from);
