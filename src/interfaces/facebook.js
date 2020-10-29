@@ -161,19 +161,11 @@ class Facebook extends Interface {
    * @param {object} data
    */
   msgEvent(event) {
-    const { id, from, message, created_time } = JSON.parse(event.data);
+    const { id, attachment, from, message, created_time } = JSON.parse(
+      event.data
+    );
 
-    // invariant error...
-    if (!from) {
-      console.error(
-        `Chinterface(facebook): No data received from SSE event`,
-        event
-      );
-
-      return;
-    }
-
-    const { username, user_id, image } = this.getUserInfo(from);
+    const { username, userId, image } = this.getUserInfo(from);
     let body = this.filterXSS(message);
     body = this.parseMessage(body);
 
@@ -186,9 +178,10 @@ class Facebook extends Interface {
       raw: message,
       timestamp: new Date(created_time).getTime(),
       extra: {
-        user_id,
+        user_id: userId,
         image,
-        broadcaster: +user_id === +broadcasterId,
+        broadcaster: +userId === +broadcasterId,
+        attachment,
       },
     });
   }
@@ -198,21 +191,16 @@ class Facebook extends Interface {
    *
    * @return {object}
    */
-  getUserInfo({ id, name }) {
-    const userObj = {
-      user_id: id || 0,
-      username: name || 'Anonymous',
-      image: '',
+  getUserInfo(from) {
+    return {
+      userId: from?.id ?? 0,
+      name: from?.name ?? 'Anonymous',
+      image: from?.id
+        ? `https://graph.facebook.com/${this.getConfig('version', 'v3.0')}/${
+            from.id
+          }/picture`
+        : '',
     };
-
-    if (id) {
-      userObj.image = `https://graph.facebook.com/${this.getConfig(
-        'version',
-        'v3.0'
-      )}/${id}/picture`;
-    }
-
-    return userObj;
   }
 
   /**
