@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "2.7.3",
+  "version": "2.8.0-0",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.js",
   "unpkg": "dist/chinterface.umd.js",

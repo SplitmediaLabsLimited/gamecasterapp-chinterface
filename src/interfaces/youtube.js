@@ -35,16 +35,12 @@ class Youtube extends Interface {
    *
    * @return {Promise.<void>}
    */
-  async connect() {
+  connect() {
     super.connect();
 
-    try {
-      this.connected = true;
-      this.emit('connected');
-      this.fetchMessages();
-    } catch (e) {
-      throw new Error(e);
-    }
+    this.connected = true;
+    this.emit('connected');
+    this.fetchMessages();
   }
 
   /**
@@ -86,7 +82,6 @@ class Youtube extends Interface {
     );
 
     this.handleMessages([data]);
-
   }
 
   _fetchMessages = async () => {
@@ -110,15 +105,15 @@ class Youtube extends Interface {
 
       const interval = parseInt(this.getConfig('interval'), 10);
 
-      this.fetchTimeout = setTimeout(this._fetchMessages, pollingIntervalMillis > interval
-        ? pollingIntervalMillis
-        : interval);
-
+      this.fetchTimeout = setTimeout(
+        this._fetchMessages,
+        pollingIntervalMillis > interval ? pollingIntervalMillis : interval
+      );
     } catch (error) {
       this.checkError(error);
       clearTimeout(this.fetchTimeout);
     }
-  }
+  };
 
   /**
    * Fetch current available messages
@@ -281,9 +276,12 @@ class Youtube extends Interface {
         data: method === 'get' ? undefined : data,
       });
     } catch (response) {
-      const { error } = await response.json();
-
-      throw error;
+      if (response.json) {
+        const { error } = await response.json();
+        throw error;
+      } else {
+        throw response;
+      }
     }
   }
 
