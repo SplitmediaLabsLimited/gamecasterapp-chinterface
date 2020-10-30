@@ -194,7 +194,7 @@ class Facebook extends Interface {
   getUserInfo(from) {
     return {
       userId: from?.id ?? 0,
-      name: from?.name ?? 'Anonymous',
+      username: from?.name ?? 'Anonymous',
       image: from?.id
         ? `https://graph.facebook.com/${this.getConfig('version', 'v3.0')}/${
             from.id
