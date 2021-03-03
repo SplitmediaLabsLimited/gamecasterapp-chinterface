@@ -86,7 +86,7 @@ class Facebook extends Interface {
 
     es.onmessage = this.msgEvent.bind(this);
 
-    es.onerror = (e) => {
+    es.onerror = e => {
       if (e.target.readyState === es.CLOSED) {
         axios.get(url).catch(({ response }) => {
           if (+response.status === CODE_500_SERVER_ERROR) {
@@ -96,7 +96,7 @@ class Facebook extends Interface {
 
               this.reConnectionTimeOut = setTimeout(
                 () => this.tryConnect(url),
-                this.reconnectCurrentInterval
+                this.reconnectCurrentInterval,
               );
             }
           }
@@ -137,7 +137,7 @@ class Facebook extends Interface {
 
     if (!this.canSend) {
       throw new Error(
-        'Unable to send message. Sending is only available for page access tokens'
+        'Unable to send message. Sending is only available for page access tokens',
       );
     }
 
@@ -148,7 +148,26 @@ class Facebook extends Interface {
       await this.api(
         'post',
         `${liveVideoId}/comments?access_token=${accessToken}`,
-        { message }
+        { message },
+      );
+    } catch (e) {
+      this.emit('error', e);
+    }
+  }
+
+  /**
+   * Method to send a message to a page
+   *
+   * @param {object} config
+   * @param {string} message
+   */
+  async sendMessageToPage(config, message) {
+    try {
+      const { liveVideoId, accessToken } = config;
+      await this.api(
+        'post',
+        `${liveVideoId}/comments?access_token=${accessToken}`,
+        { message },
       );
     } catch (e) {
       this.emit('error', e);
@@ -162,7 +181,7 @@ class Facebook extends Interface {
    */
   msgEvent(event) {
     const { id, attachment, from, message, created_time } = JSON.parse(
-      event.data
+      event.data,
     );
 
     const { username, userId, image } = this.getUserInfo(from);
@@ -228,7 +247,7 @@ class Facebook extends Interface {
 
     return message.replace(
       regex,
-      (match) => `<a href='${match}' class='link'>${match}</a>`
+      match => `<a href='${match}' class='link'>${match}</a>`,
     );
   }
 
