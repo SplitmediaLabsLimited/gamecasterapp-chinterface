@@ -238,7 +238,12 @@ class Twitch extends Interface {
       throw new Error('userId is not set.');
     }
 
-    return await this.api('get', `chat/${userId}/badges`);
+    const globalResponse = await this.api('get', 'chat/badges/global');
+    const customResponse = await this.api('get', 'chat/badges', {
+      broadcaster_id: userId,
+    });
+
+    return [...globalResponse?.data?.data, ...customResponse?.data?.data];
   }
 
   /**
@@ -253,11 +258,12 @@ class Twitch extends Interface {
       throw new Error('accessToken not set.');
     }
 
-    const { data } = await this.api('get', 'user');
+    const { data } = await this.api('get', 'users');
+    const user = data.data[0];
 
-    const channel = this.getConfig('channel', data.name);
-    const username = this.getConfig('username', data.name);
-    const userId = this.getConfig('userId', parseInt(data._id, 10));
+    const channel = this.getConfig('channel', user.login);
+    const username = this.getConfig('username', user.login);
+    const userId = this.getConfig('userId', parseInt(user.id, 10));
 
     this.setConfig({
       channel,
@@ -276,11 +282,11 @@ class Twitch extends Interface {
     super.setConfig(key, value);
 
     this.http = axios.create({
-      baseURL: 'https://api.twitch.tv/kraken/',
+      baseURL: 'https://api.twitch.tv/helix/',
       headers: {
         'Client-ID': this.getConfig('clientId'),
         Accept: 'application/vnd.twitchtv.v5+json',
-        Authorization: `OAuth ${this.getConfig('accessToken')}`,
+        Authorization: `Bearer ${this.getConfig('accessToken')}`,
       },
       responseType: 'json',
     });
