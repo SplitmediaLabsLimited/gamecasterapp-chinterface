@@ -172,6 +172,7 @@ class Twitch extends Interface {
         mod: user.mod,
         turbo: user.turbo,
         broadcaster: isBroadcaster,
+        'message-type': user['message-type'],
         emotes,
       },
     });
