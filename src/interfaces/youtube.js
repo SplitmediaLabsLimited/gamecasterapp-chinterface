@@ -179,7 +179,7 @@ class Youtube extends Interface {
 
       let body = this.filterXSS(message);
 
-      if (this.getConfig('formatMessages') && this.getConfig('parseUrl') ) {
+      if (this.getConfig('formatMessages') && this.getConfig('parseUrl')) {
         body = this.parseUrl(message);
       }
 
@@ -222,9 +222,14 @@ class Youtube extends Interface {
    * return {string}
    */
   parseEmoticon(message) {
-    return message.replace(new RegExp(
-      Object.keys(YOUTUBE_EMOJI_LIST).map(message=> escapeRegExp(message)).join("|"), "g"), 
-      match=> `<img class='emoticon' src=${YOUTUBE_EMOJI_LIST[match]} />`
+    return message.replace(
+      new RegExp(
+        Object.keys(YOUTUBE_EMOJI_LIST)
+          .map((message) => escapeRegExp(message))
+          .join('|'),
+        'g'
+      ),
+      (match) => `<img class='emoticon' src=${YOUTUBE_EMOJI_LIST[match]} />`
     );
   }
 
