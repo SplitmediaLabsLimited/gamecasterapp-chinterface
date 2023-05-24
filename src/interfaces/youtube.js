@@ -225,7 +225,7 @@ class Youtube extends Interface {
     return message.replace(
       new RegExp(
         Object.keys(YOUTUBE_EMOJI_LIST)
-          .map((message) => escapeRegExp(message))
+          .map((message) => this.escapeRegExp(message))
           .join('|'),
         'g'
       ),
