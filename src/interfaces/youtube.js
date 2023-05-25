@@ -7,6 +7,7 @@
 
 import axios from 'redaxios';
 import Interface from './interface';
+import { YOUTUBE_EMOJI_LIST } from '../constants';
 
 class Youtube extends Interface {
   messagesId = [];
@@ -178,8 +179,12 @@ class Youtube extends Interface {
 
       let body = this.filterXSS(message);
 
-      if (this.getConfig('formatMessages')) {
-        body = this.parseUrl(message);
+      if (this.getConfig('formatMessages') && this.getConfig('parseUrl')) {
+        body = this.parseUrl(body);
+      }
+
+      if (this.getConfig('parseEmoticon')) {
+        body = this.parseEmoticon(body);
       }
 
       this.emit('message', {
@@ -205,6 +210,27 @@ class Youtube extends Interface {
     return message.replace(regex, (match) => {
       return `<a href='${match}' class='link'>${match}</a>`;
     });
+  }
+
+  escapeRegExp(string) {
+    return string.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * Parses Emoticons
+   *
+   * return {string}
+   */
+  parseEmoticon(message) {
+    return message.replace(
+      new RegExp(
+        Object.keys(YOUTUBE_EMOJI_LIST)
+          .map((message) => this.escapeRegExp(message))
+          .join('|'),
+        'g'
+      ),
+      (match) => `<img class='emoticon' src=${YOUTUBE_EMOJI_LIST[match]} />`
+    );
   }
 
   /**
