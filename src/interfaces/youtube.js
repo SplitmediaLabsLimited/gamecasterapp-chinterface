@@ -180,11 +180,11 @@ class Youtube extends Interface {
       let body = this.filterXSS(message);
 
       if (this.getConfig('formatMessages') && this.getConfig('parseUrl')) {
-        body = this.parseUrl(message);
+        body = this.parseUrl(body);
       }
 
       if (this.getConfig('parseEmoticon')) {
-        body = this.parseEmoticon(message);
+        body = this.parseEmoticon(body);
       }
 
       this.emit('message', {
