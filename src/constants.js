@@ -2577,5 +2577,3 @@ export const YOUTUBE_EMOJI_LIST = {
   ':pride-hand-yellow-nails:': 'https://yt3.ggpht.com/1dEPlxkQ1RdZkPo5CLgYvneMQ-BBo63b3nnASEAXoccnVktMjgviKqMj1pjPiK2zTPTc7g=w24-h24-c-k-nd',
   ':pride-face-orange-flowing:': 'https://yt3.ggpht.com/RuhTeU8YiT0_NaOYjMmXv77eEw5eO5Bdzfr7ouS0u3ZAK2J4coKGe5g4fN8mJV85jC63hw=w24-h24-c-k-nd" } ',
 };
-
-
