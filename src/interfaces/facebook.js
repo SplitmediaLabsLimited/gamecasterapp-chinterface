@@ -12,6 +12,10 @@ import Debug from '../utils/debug';
 const CODE_500_SERVER_ERROR = 500;
 
 class Facebook extends Interface {
+  messagesId = [];
+  fetchTimeout;
+  since;
+
   /**
    * Initialize the Interface.
    */
@@ -22,8 +26,8 @@ class Facebook extends Interface {
 
     this.setConfig({
       version: 'v3.3',
-      parseUrl: true,
-      reconnect: true,
+      parseUrl: true,      
+      interval: 5000,
     });
 
     this.required = ['liveVideoId', 'accessToken'];
@@ -32,12 +36,11 @@ class Facebook extends Interface {
       'id',
       'attachment',
       'created_time',
-      'from',
+      'from{id, name,picture{url}}',
       'message',
       'message_tags',
     ];
-
-    this.reConnectionTimeOut = '';
+    
   }
 
   /**
@@ -47,81 +50,102 @@ class Facebook extends Interface {
    */
   async connect() {
     super.connect();
-
-    const liveVideoId = this.getConfig('liveVideoId');
-    const accessToken = this.getConfig('accessToken');
-    const commentRate = this.getConfig('commentRate', 'one_hundred_per_second');
-    const fields = this.fields.join(',');
-
-    const urlMain = [
-      'https://streaming-graph.facebook.com',
-      liveVideoId,
-      'live_comments',
-    ].join('/');
-
-    const params = [
-      `access_token=${accessToken}`,
-      `comment_rate=${commentRate}`,
-      `fields=${fields}`,
-    ].join('&');
-
-    const url = `${urlMain}?${params}`;
-
-    this.tryConnect(url);
+    this.connected = true;
+    this.emit('connected');
+    this.fetchMessages();   
   }
 
+  _fetchMessages = async () => {
+    try {
+      const liveVideoId = this.getConfig('liveVideoId');     
+      const accessToken = this.getConfig('accessToken');     
+
+      //check if live stopped
+      const videoParams = {
+        access_token: accessToken,        
+        fields: 'status',
+      };
+
+      const { data: videoDetails } = await this.api('get', liveVideoId, videoParams);      
+      
+      if(!['LIVE', 'SCHEDULED_LIVE'].includes(videoDetails.status)) {
+        this.disconnect();
+        return;       
+      }
+      
+      //continue getting chats
+      const fields = this.fields.join(',');
+
+      const urlMain = [        
+        liveVideoId,
+        'comments',
+      ].join('/');      
+
+      //instead of paging the since parameter would be used for optimization
+      const params = this.since ? {
+        access_token: accessToken,        
+        fields: fields,
+        limit: 200,
+        since: this.since,
+      } : {
+        access_token: accessToken,        
+        fields: fields,
+        limit: 200,        
+      };      
+
+      const { data: messages } = await this.api('get', urlMain, params);
+
+      console.log('chinterfate fetchMessage', messages);
+
+      this.handleMessages(messages.data);
+
+      const interval = parseInt(this.getConfig('interval'), 10);
+
+      this.fetchTimeout = setTimeout(this._fetchMessages, interval);      
+
+    } catch (error) {      
+      clearTimeout(this.fetchTimeout);
+      console.error(error);
+      this.emit('error', error);
+    }
+  };
+
   /**
-   * Connects to Event Source
+   * Fetch current available messages
    *
-   * @param {string} url
+   * @return {Promise}
    */
-  tryConnect(url) {
-    const es = new EventSource(url);
-    Debug;
-    es.onopen = () => {
-      this.connected = true;
-      this.emit('connected');
-      this.resetReconnect();
-    };
+  fetchMessages() {
+    const interval = parseInt(this.getConfig('interval'), 10);
+    this.fetchTimeout = setTimeout(this._fetchMessages, interval);
+  }
 
-    es.onmessage = this.msgEvent.bind(this);
-
-    es.onerror = e => {
-      if (e.target.readyState === es.CLOSED) {
-        axios.get(url).catch(({ response }) => {
-          if (+response.status === CODE_500_SERVER_ERROR) {
-            if (this.shouldReconnect) {
-              this.increaseReconnect();
-              this.emit('reconnect', this.reconnectAttempt);
-
-              this.reConnectionTimeOut = setTimeout(
-                () => this.tryConnect(url),
-                this.reconnectCurrentInterval,
-              );
-            }
-          }
-          this.emit('error', response);
-        });
+  handleMessages(list) {
+    list.forEach((message) => {
+      if (this.messagesId.includes(message.id)) {
         return;
       }
 
-      this.emit('error', e);
-    };
+      this.messagesId.push(message.id);
+      this.since = message.created_time.split('+')[0];
+      this.msgEvent(message);
 
-    this.es = es;
-  }
+    });
+
+  }  
 
   /**
    * Disconnecs the Event Source
    */
   disconnect() {
-    clearTimeout(this.reConnectionTimeOut);
+    super.disconnect();
 
-    if (this.es && this.es.close) {
-      this.es.close();
-    }
-
+    this.connected = false;
     this.canSend = false;
+    this.since = null;
+    this.messagesId = [];
+    clearTimeout(this.fetchTimeout);  
+    
     this.emit('disconnected');
   }
 
@@ -180,11 +204,12 @@ class Facebook extends Interface {
    * @param {object} data
    */
   msgEvent(event) {
-    const { id, attachment, from, message, created_time } = JSON.parse(
-      event.data,
-    );
+    const { id, attachment, from, message, created_time } = event;    
 
-    const { username, userId, image } = this.getUserInfo(from);
+    const username = from?.name ?? 'Anonymous';
+    const userId = from?.id ?? 0;
+    const image  = from.picture.data.url;
+
     let body = this.filterXSS(message);
     body = this.parseMessage(body);
 
@@ -203,24 +228,7 @@ class Facebook extends Interface {
         attachment,
       },
     });
-  }
-
-  /**
-   * Method to create unified user object
-   *
-   * @return {object}
-   */
-  getUserInfo(from) {
-    return {
-      userId: from?.id ?? 0,
-      username: from?.name ?? 'Anonymous',
-      image: from?.id
-        ? `https://graph.facebook.com/${this.getConfig('version', 'v3.0')}/${
-            from.id
-          }/picture`
-        : '',
-    };
-  }
+  }  
 
   /**
    * Parses message
@@ -310,14 +318,18 @@ class Facebook extends Interface {
    *
    * @return {Promise}
    */
-  api(method, url, data = {}) {
-    return this.http.request({
-      method,
-      url:
-        url +
-        (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
-      data: method === 'get' ? undefined : data,
-    });
+  async api(method, url, data = {}) {
+    try {      
+      return await this.http.request({
+        method,
+        url:
+          url +
+          (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
+        data: method === 'get' ? undefined : data,
+      });
+    } catch (response) {
+      throw new Error(response);
+    }
   }
 
   /**
