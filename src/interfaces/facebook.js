@@ -165,13 +165,22 @@ class Facebook extends Interface {
       );
     }
 
+    const videoId = this.getConfig('videoId');
+
+    if (!videoId) {
+      this.canSend = false;
+      console.error('Unable to send message. Need video id of stream');
+      return;      
+    }
+
     const liveVideoId = this.getConfig('liveVideoId');
     const accessToken = this.getConfig('accessToken');
+
 
     try {
       await this.api(
         'post',
-        `${liveVideoId}/comments?access_token=${accessToken}`,
+        `${videoId}/comments?access_token=${accessToken}`,
         { message },
       );
     } catch (e) {
