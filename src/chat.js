@@ -6,7 +6,19 @@
  */
 
 import Debug from './utils/debug';
-import * as Interfaces from './bags/interfaces';
+import {
+  twitch,
+  youtube,
+  youtubeLive,
+  facebook,
+} from './bags/interfaces';
+
+const SERVICES = {
+  twitch,
+  youtube,
+  youtubeLive,
+  facebook,
+};
 
 class Chat {
   debug = false;
@@ -20,12 +32,14 @@ class Chat {
    */
   service(service) {
     if (this.isServiceExisting(service)) {
-      return new Interfaces[service]();
-    } else {
-      Debug.log(`The requested service "${service}" does not exist.`);
-
-      return null;
+      return new SERVICES[service]();
     }
+
+    Debug.log(
+      `The requested service "${service}" does not exist. Available services: ${Object.keys(SERVICES).join(', ')}.`
+    );
+
+    return null;
   }
 
   /**
@@ -36,7 +50,7 @@ class Chat {
    * @return {boolean}
    */
   isServiceExisting(service) {
-    return Object.keys(Interfaces).indexOf(service) !== -1;
+    return Object.prototype.hasOwnProperty.call(SERVICES, service);
   }
 
   /**

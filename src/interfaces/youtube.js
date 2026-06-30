@@ -8,6 +8,7 @@
 import axios from 'redaxios';
 import Interface from './interface';
 import { YOUTUBE_EMOJI_LIST } from '../constants';
+import log from '../utils/logger';
 
 class Youtube extends Interface {
   messagesId = [];
@@ -132,6 +133,11 @@ class Youtube extends Interface {
    * @param {object} list
    */
   handleMessages(list) {
+    log.trace('YOUTUBE', 'HANDLE MESSAGES', {
+      count: list.length,
+      ids: list.map((item) => item.id),
+    });
+
     list.forEach(({ id, snippet, authorDetails }) => {
       if (this.messagesId.includes(id)) {
         return;
