@@ -309,8 +309,6 @@ class YoutubeLive extends Youtube {
     }
 
     this.resetReconnect();
-
-    this.scheduleNextStreamPoll();
   }
 
   handleMessages(list) {
@@ -426,15 +424,11 @@ class YoutubeLive extends Youtube {
       sessionId,
 
       pageToken: this.nextPageToken || null,
-
-      pollAlreadyScheduled: Boolean(this.reconnectTimeout),
     });
 
     this.streamAbortController = null;
 
-    if (!this.reconnectTimeout) {
-      this.scheduleNextStreamPoll(true);
-    }
+    this.scheduleNextStreamPoll();
   }
 
   getStreamReconnectDelay() {

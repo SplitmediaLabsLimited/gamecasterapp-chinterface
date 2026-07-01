@@ -366,17 +366,13 @@ export async function openStreamList({
   const parser = new StreamingJsonParser(onData);
   const textDecoder = new TextDecoder();
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
+  if (signal) {
+    signal.addEventListener('abort', () => {
+      reader.cancel().catch(() => {});
+    });
+  }
 
-      if (done) {
-        break;
-      }
-
-      parser.append(textDecoder.decode(value, { stream: true }));
-    }
-
+  const finishStream = () => {
     parser.flush();
 
     log.trace(LOG_SCOPE, 'STREAM END', {
@@ -387,7 +383,9 @@ export async function openStreamList({
     if (onEnd) {
       onEnd();
     }
-  } catch (error) {
+  };
+
+  const handleReadError = (error) => {
     if (error.name === 'AbortError') {
       log.trace(LOG_SCOPE, 'STREAM ABORTED', {
         elapsedMs: Date.now() - requestStartedAt,
@@ -404,6 +402,23 @@ export async function openStreamList({
     if (onError) {
       onError(error);
     }
+  };
+
+  const pump = () =>
+    reader.read().then((result) => {
+      if (result.done) {
+        finishStream();
+        return;
+      }
+
+      parser.append(textDecoder.decode(result.value, { stream: true }));
+      return pump();
+    });
+
+  try {
+    await pump();
+  } catch (error) {
+    handleReadError(error);
   }
 }
 
