@@ -7,9 +7,12 @@
 
 import axios from 'redaxios';
 import Interface from './interface';
-import Debug from '../utils/debug';
+import log from '../utils/logger';
 
-const CODE_500_SERVER_ERROR = 500;
+const LOG_SCOPE = 'FACEBOOK';
+
+// Latest Graph API version. https://developers.facebook.com/docs/graph-api/changelog/versions/
+const DEFAULT_GRAPH_VERSION = 'v25.0';
 
 class Facebook extends Interface {
   messagesId = [];
@@ -25,8 +28,8 @@ class Facebook extends Interface {
     this.canSend = false;
 
     this.setConfig({
-      version: 'v3.3',
-      parseUrl: true,      
+      version: DEFAULT_GRAPH_VERSION,
+      parseUrl: true,
       interval: 5000,
     });
 
@@ -40,72 +43,107 @@ class Facebook extends Interface {
       'message',
       'message_tags',
     ];
-    
+
+    log.trace(LOG_SCOPE, 'CONSTRUCTED', {
+      version: DEFAULT_GRAPH_VERSION,
+    });
   }
 
   /**
-   * Initialize connection to the Event Source
+   * Initialize connection and start polling for comments.
    *
    * @return {Promise}
    */
   async connect() {
     super.connect();
     this.connected = true;
+
+    log.trace(LOG_SCOPE, 'CONNECT', {
+      liveVideoId: this.getConfig('liveVideoId'),
+      accessToken: log.redactToken(this.getConfig('accessToken')),
+      interval: this.getConfig('interval'),
+    });
+
     this.emit('connected');
-    this.fetchMessages();   
+    this.fetchMessages();
   }
 
   _fetchMessages = async () => {
     try {
-      const liveVideoId = this.getConfig('liveVideoId');     
-      const accessToken = this.getConfig('accessToken');     
+      const liveVideoId = this.getConfig('liveVideoId');
+      const accessToken = this.getConfig('accessToken');
 
       //check if live stopped
       const videoParams = {
-        access_token: accessToken,        
+        access_token: accessToken,
         fields: 'status',
       };
 
-      const { data: videoDetails } = await this.api('get', liveVideoId, videoParams);      
-      
-      if(!['LIVE', 'SCHEDULED_LIVE'].includes(videoDetails.status)) {
+      log.trace(LOG_SCOPE, 'FETCH STATUS', { liveVideoId });
+
+      const { data: videoDetails } = await this.api('get', liveVideoId, videoParams);
+
+      log.trace(LOG_SCOPE, 'FETCH STATUS RESULT', {
+        liveVideoId,
+        status: videoDetails ? videoDetails.status : null,
+      });
+
+      if (!['LIVE', 'SCHEDULED_LIVE'].includes(videoDetails.status)) {
+        log.trace(LOG_SCOPE, 'FETCH STOPPING', {
+          reason: 'video not live',
+          status: videoDetails ? videoDetails.status : null,
+        });
         this.disconnect();
-        return;       
+        return;
       }
-      
+
       //continue getting chats
       const fields = this.fields.join(',');
 
-      const urlMain = [        
-        liveVideoId,
-        'comments',
-      ].join('/');      
+      const urlMain = [liveVideoId, 'comments'].join('/');
 
       //instead of paging the since parameter would be used for optimization
-      const params = this.since ? {
-        access_token: accessToken,        
-        fields: fields,
-        limit: 200,
-        since: this.since,
-      } : {
-        access_token: accessToken,        
-        fields: fields,
-        limit: 200,        
-      };      
+      const params = this.since
+        ? {
+            access_token: accessToken,
+            fields: fields,
+            limit: 200,
+            since: this.since,
+          }
+        : {
+            access_token: accessToken,
+            fields: fields,
+            limit: 200,
+          };
+
+      log.trace(LOG_SCOPE, 'FETCH COMMENTS', {
+        liveVideoId,
+        since: this.since || null,
+        fields,
+      });
 
       const { data: messages } = await this.api('get', urlMain, params);
 
-      console.log('chinterfate fetchMessage', messages);
+      const list = (messages && messages.data) || [];
 
-      this.handleMessages(messages.data);
+      log.trace(LOG_SCOPE, 'FETCH COMMENTS RESULT', {
+        liveVideoId,
+        received: list.length,
+        seenCount: this.messagesId.length,
+      });
+
+      this.handleMessages(list);
 
       const interval = parseInt(this.getConfig('interval'), 10);
 
-      this.fetchTimeout = setTimeout(this._fetchMessages, interval);      
-
-    } catch (error) {      
+      this.fetchTimeout = setTimeout(this._fetchMessages, interval);
+    } catch (error) {
       clearTimeout(this.fetchTimeout);
-      console.error(error);
+
+      log.trace(LOG_SCOPE, 'FETCH ERROR', {
+        message: error && error.message ? error.message : String(error),
+      });
+
       this.emit('error', error);
     }
   };
@@ -123,29 +161,30 @@ class Facebook extends Interface {
   handleMessages(list) {
     list.forEach((message) => {
       if (this.messagesId.includes(message.id)) {
+        log.trace(LOG_SCOPE, 'COMMENT DUPLICATE', { id: message.id });
         return;
       }
 
       this.messagesId.push(message.id);
       this.since = message.created_time.split('+')[0];
       this.msgEvent(message);
-
     });
-
-  }  
+  }
 
   /**
-   * Disconnecs the Event Source
+   * Disconnects the poller.
    */
   disconnect() {
     super.disconnect();
+
+    log.trace(LOG_SCOPE, 'DISCONNECT', { wasConnected: this.connected });
 
     this.connected = false;
     this.canSend = false;
     this.since = null;
     this.messagesId = [];
-    clearTimeout(this.fetchTimeout);  
-    
+    clearTimeout(this.fetchTimeout);
+
     this.emit('disconnected');
   }
 
@@ -156,10 +195,12 @@ class Facebook extends Interface {
    */
   async send(message) {
     if (!this.isConnected) {
+      log.trace(LOG_SCOPE, 'SEND FAILED', { reason: 'not connected' });
       throw new Error('Unable to send message. No connection to Event Source.');
     }
 
     if (!this.canSend) {
+      log.trace(LOG_SCOPE, 'SEND FAILED', { reason: 'not a page access token' });
       throw new Error(
         'Unable to send message. Sending is only available for page access tokens',
       );
@@ -169,13 +210,14 @@ class Facebook extends Interface {
 
     if (!videoId) {
       this.canSend = false;
+      log.trace(LOG_SCOPE, 'SEND FAILED', { reason: 'videoId not set' });
       console.error('Unable to send message. Need video id of stream');
-      return;      
+      return;
     }
 
-    const liveVideoId = this.getConfig('liveVideoId');
     const accessToken = this.getConfig('accessToken');
 
+    log.trace(LOG_SCOPE, 'SEND', { videoId });
 
     try {
       await this.api(
@@ -183,7 +225,12 @@ class Facebook extends Interface {
         `${videoId}/comments?access_token=${accessToken}`,
         { message },
       );
+
+      log.trace(LOG_SCOPE, 'SEND DONE', { videoId });
     } catch (e) {
+      log.trace(LOG_SCOPE, 'SEND ERROR', {
+        message: e && e.message ? e.message : String(e),
+      });
       this.emit('error', e);
     }
   }
@@ -197,12 +244,20 @@ class Facebook extends Interface {
   async sendMessageToPage(config, message) {
     try {
       const { liveVideoId, accessToken } = config;
+
+      log.trace(LOG_SCOPE, 'SEND TO PAGE', { liveVideoId });
+
       await this.api(
         'post',
         `${liveVideoId}/comments?access_token=${accessToken}`,
         { message },
       );
+
+      log.trace(LOG_SCOPE, 'SEND TO PAGE DONE', { liveVideoId });
     } catch (e) {
+      log.trace(LOG_SCOPE, 'SEND TO PAGE ERROR', {
+        message: e && e.message ? e.message : String(e),
+      });
       this.emit('error', e);
     }
   }
@@ -213,23 +268,30 @@ class Facebook extends Interface {
    * @param {object} data
    */
   msgEvent(event) {
-    const { id, attachment, from, message, created_time } = event;    
+    const { id, attachment, from, message, created_time } = event;
 
     const username = from?.name ?? 'Anonymous';
     const userId = from?.id ?? 0;
-    const image  = from.picture.data.url;
+    const image = from?.picture?.data?.url ?? null;
 
-    let body = this.filterXSS(message);
+    let body = this.filterXSS(message ?? '');
     body = this.parseMessage(body);
 
     const broadcasterId = this.getConfig('userId');
+
+    log.trace(LOG_SCOPE, 'EMIT message', {
+      id,
+      username,
+      userId,
+      broadcaster: +userId === +broadcasterId,
+    });
 
     this.emit('message', {
       id,
       body,
       username,
       raw: message,
-      timestamp: new Date(created_time).getTime(),
+      timestamp: created_time ? new Date(created_time).getTime() : Date.now(),
       extra: {
         user_id: userId,
         image,
@@ -237,7 +299,7 @@ class Facebook extends Interface {
         attachment,
       },
     });
-  }  
+  }
 
   /**
    * Parses message
@@ -276,25 +338,65 @@ class Facebook extends Interface {
   async loadUser() {
     const accessToken = this.getConfig('accessToken');
     if (!accessToken) {
+      log.trace(LOG_SCOPE, 'LOAD USER FAILED', { reason: 'accessToken not set' });
       throw new Error('accessToken not set.');
     }
 
+    log.trace(LOG_SCOPE, 'LOAD USER START', {
+      accessToken: log.redactToken(accessToken),
+    });
+
     const { data } = await this.api('get', `me`, {
-      fields: 'id,name,metadata{type}',
-      metadata: 1,
+      fields: 'id,name',
       access_token: accessToken,
     });
 
-    const { id: userId, name: username, metadata } = data;
+    const { id: userId, name: username } = data;
 
-    if (metadata.type === 'page') {
-      this.canSend = true;
-    }
+    // The `metadata` introspection previously used to detect a page vs. user
+    // token was deprecated in Graph API v25.0 (it now returns a 400), so probe
+    // a Page-only field instead to decide whether sending is available.
+    this.canSend = await this.isPageAccessToken(accessToken);
 
     this.setConfig({
       userId,
       username,
     });
+
+    log.trace(LOG_SCOPE, 'LOAD USER DONE', {
+      userId,
+      username,
+      isPage: this.canSend,
+      canSend: this.canSend,
+    });
+  }
+
+  /**
+   * Determines whether the given access token is a Page access token.
+   *
+   * `/me?metadata=1` no longer reports the node type in Graph API v25.0, so we
+   * probe the `category` field which only exists on Page nodes. Requesting it
+   * with a User token errors, which we treat as "not a page".
+   *
+   * @param {string} accessToken
+   *
+   * @return {Promise<boolean>}
+   */
+  async isPageAccessToken(accessToken) {
+    try {
+      const { data } = await this.api('get', 'me', {
+        fields: 'category',
+        access_token: accessToken,
+      });
+
+      return Boolean(data && data.category);
+    } catch (error) {
+      log.trace(LOG_SCOPE, 'TOKEN TYPE PROBE FAILED', {
+        message: error && error.message ? error.message : String(error),
+      });
+
+      return false;
+    }
   }
 
   /**
@@ -306,7 +408,7 @@ class Facebook extends Interface {
   async setConfig(key, value = null) {
     super.setConfig(key, value);
 
-    const version = this.getConfig('version', 'v3.0');
+    const version = this.getConfig('version', DEFAULT_GRAPH_VERSION);
 
     if (version) {
       this.http = axios.create({
@@ -314,6 +416,14 @@ class Facebook extends Interface {
         responseType: 'json',
       });
     }
+
+    log.trace(LOG_SCOPE, 'SET CONFIG', {
+      version,
+      liveVideoId: this.getConfig('liveVideoId') || null,
+      accessToken: log.redactToken(this.getConfig('accessToken')),
+      interval: this.getConfig('interval'),
+      parseUrl: this.getConfig('parseUrl'),
+    });
 
     return this;
   }
@@ -328,17 +438,78 @@ class Facebook extends Interface {
    * @return {Promise}
    */
   async api(method, url, data = {}) {
-    try {      
-      return await this.http.request({
+    const requestUrl =
+      url +
+      (method === 'get' ? '?' + new URLSearchParams(data).toString() : '');
+
+    log.trace(LOG_SCOPE, 'API REQUEST', {
+      method,
+      version: this.getConfig('version', DEFAULT_GRAPH_VERSION),
+      url: this.redactUrl(requestUrl),
+    });
+
+    try {
+      const response = await this.http.request({
         method,
-        url:
-          url +
-          (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
+        url: requestUrl,
         data: method === 'get' ? undefined : data,
       });
+
+      log.trace(LOG_SCOPE, 'API RESPONSE', {
+        method,
+        status: response.status || 200,
+        url: this.redactUrl(requestUrl),
+      });
+
+      return response;
     } catch (response) {
-      throw new Error(response);
+      const fbError = response && response.data && response.data.error;
+      const status = (response && response.status) || null;
+      const statusText = (response && response.statusText) || null;
+
+      log.trace(LOG_SCOPE, 'API ERROR', {
+        method,
+        url: this.redactUrl(requestUrl),
+        status,
+        statusText,
+        fbCode: (fbError && fbError.code) || null,
+        fbSubcode: (fbError && fbError.error_subcode) || null,
+        fbType: (fbError && fbError.type) || null,
+        fbMessage: (fbError && fbError.message) || null,
+        // Surface the raw payload when Facebook didn't return a standard error
+        // object (e.g. an empty/opaque body on a cross-origin 400) so failures
+        // aren't logged as "[object Object]" with no detail.
+        rawData: fbError ? undefined : response && response.data,
+      });
+
+      const message =
+        (fbError && fbError.message) ||
+        (status
+          ? `Request failed with status ${status}${
+              statusText ? ` (${statusText})` : ''
+            }`
+          : String(response));
+
+      throw new Error(message);
     }
+  }
+
+  /**
+   * Redacts the access_token value from a URL so it can be safely logged.
+   *
+   * @param {string} url
+   *
+   * @return {string}
+   */
+  redactUrl(url) {
+    if (typeof url !== 'string') {
+      return url;
+    }
+
+    return url.replace(
+      /(access_token=)[^&]+/i,
+      (match, prefix) => `${prefix}${log.redactToken(this.getConfig('accessToken'))}`
+    );
   }
 
   /**
