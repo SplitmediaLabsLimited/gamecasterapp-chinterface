@@ -6,6 +6,7 @@
  */
 
 import Debug from './utils/debug';
+import log from './utils/logger';
 import {
   twitch,
   youtube,
@@ -32,7 +33,9 @@ class Chat {
    */
   service(service) {
     if (this.isServiceExisting(service)) {
-      return new SERVICES[service]();
+      const instance = new SERVICES[service]();
+      log.trace('CHAT', 'SERVICE READY', { service });
+      return instance;
     }
 
     Debug.log(
