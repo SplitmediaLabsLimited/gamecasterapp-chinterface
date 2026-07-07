@@ -4,6 +4,14 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-07-07
+
+### Debug logging
+
+- **`src/interfaces/twitch.js`** — Added structured `log.trace('TWITCH', …)` tracing across the Twitch service lifecycle: construct, connect/disconnect, TMI events (`connected`, `disconnected`, `reconnect`, `notice`), message emit, send, listener add/remove, `clientOn`, `setConfig`, `loadUser`, `getBadges`, and Helix `api` request/response/error. Access tokens are redacted via `log.redactToken()`. Connect failures now reject the connect promise with a logged error.
+
+---
+
 ## 2026-07-04
 
 ### Package version

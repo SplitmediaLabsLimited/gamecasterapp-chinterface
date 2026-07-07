@@ -8,6 +8,9 @@
 import tmi from 'tmi.js';
 import axios from 'redaxios';
 import Interface from './interface';
+import log from '../utils/logger';
+
+const LOG_SCOPE = 'TWITCH';
 
 class Twitch extends Interface {
   /**
@@ -24,6 +27,13 @@ class Twitch extends Interface {
       reconnect: true,
       formatMessages: true,
     });
+
+    log.trace(LOG_SCOPE, 'CONSTRUCTED', {
+      required: this.required,
+      parseEmoticon: true,
+      reconnect: true,
+      formatMessages: true,
+    });
   }
 
   /**
@@ -34,15 +44,25 @@ class Twitch extends Interface {
   connect() {
     super.connect();
 
-    return new Promise((resolve, reject) => {
-      const clientId = this.getConfig('clientId');
-      const channel = this.getConfig('channel');
+    const clientId = this.getConfig('clientId');
+    const channel = this.getConfig('channel');
+    const username = this.getConfig('username');
+    const accessToken = this.getConfig('accessToken');
+    const hasIdentity = !!(username && accessToken);
 
-      const username = this.getConfig('username');
-      const accessToken = this.getConfig('accessToken');
+    log.trace(LOG_SCOPE, 'CONNECT', {
+      channel,
+      clientId,
+      hasIdentity,
+      username: username || null,
+      accessToken: log.redactToken(accessToken),
+      reconnect: this.shouldReconnect,
+    });
+
+    return new Promise((resolve, reject) => {
       let identity = {};
 
-      if (username && accessToken) {
+      if (hasIdentity) {
         identity = {
           username,
           password: accessToken,
@@ -62,13 +82,52 @@ class Twitch extends Interface {
         },
       });
 
-      this.client.on('connected', () => {
+      this.client.on('connected', (addr, port) => {
+        log.trace(LOG_SCOPE, 'CONNECTED', {
+          channel,
+          addr: addr || null,
+          port: port || null,
+        });
         this.connected = true;
         this.emit('connected');
         resolve();
       });
 
-      this.client.connect();
+      this.client.on('disconnected', reason => {
+        log.trace(LOG_SCOPE, 'DISCONNECTED', {
+          channel,
+          reason: reason || null,
+          wasConnected: this.connected,
+        });
+        this.connected = false;
+      });
+
+      this.client.on('reconnect', () => {
+        log.trace(LOG_SCOPE, 'RECONNECT', {
+          channel,
+          attempt: this.reconnectAttempt,
+        });
+      });
+
+      this.client.on('notice', (noticeChannel, msgtype, message) => {
+        log.trace(LOG_SCOPE, 'NOTICE', {
+          channel: noticeChannel || channel,
+          msgtype: msgtype || null,
+          message: message || null,
+        });
+      });
+
+      this.client.connect().catch(err => {
+        log.trace(LOG_SCOPE, 'CONNECT ERROR', {
+          channel,
+          hasIdentity,
+          error: {
+            name: err && err.name ? err.name : 'Error',
+            message: err && err.message ? err.message : String(err),
+          },
+        });
+        reject(err);
+      });
     });
   }
 
@@ -76,6 +135,12 @@ class Twitch extends Interface {
    * Disconnects the Interface from its data source.
    */
   disconnect() {
+    log.trace(LOG_SCOPE, 'DISCONNECT', {
+      channel: this.getConfig('channel'),
+      wasConnected: this.connected,
+      hadClient: this.client !== null,
+    });
+
     super.disconnect();
 
     if (this.client !== null) {
@@ -95,7 +160,28 @@ class Twitch extends Interface {
    * @return {Promise}
    */
   async send(message) {
-    return await this.client.say(this.getConfig('channel'), message);
+    const channel = this.getConfig('channel');
+
+    log.trace(LOG_SCOPE, 'SEND', {
+      channel,
+      messageLength: typeof message === 'string' ? message.length : null,
+      isConnected: this.connected,
+    });
+
+    try {
+      const result = await this.client.say(channel, message);
+      log.trace(LOG_SCOPE, 'SEND DONE', { channel });
+      return result;
+    } catch (err) {
+      log.trace(LOG_SCOPE, 'SEND ERROR', {
+        channel,
+        error: {
+          name: err && err.name ? err.name : 'Error',
+          message: err && err.message ? err.message : String(err),
+        },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -108,6 +194,10 @@ class Twitch extends Interface {
     super.on(evnt, callback);
 
     if (this.client !== null && evnt === 'message') {
+      log.trace(LOG_SCOPE, 'LISTENER ADD', {
+        event: evnt,
+        channel: this.getConfig('channel'),
+      });
       this.client.on('chat', this.msgEvnt.bind(this));
     }
   }
@@ -121,6 +211,10 @@ class Twitch extends Interface {
     super.destroy(evnt);
 
     if (this.client !== null && evnt === 'message') {
+      log.trace(LOG_SCOPE, 'LISTENER REMOVE', {
+        event: evnt,
+        channel: this.getConfig('channel'),
+      });
       this.client.removeListener('chat', this.msgEvnt.bind(this));
     }
   }
@@ -157,7 +251,7 @@ class Twitch extends Interface {
       body = this.filterXSS(message);
     }
 
-    this.emit('message', {
+    const payload = {
       id: user.id || null,
       username: user['display-name'] || user.username,
       body,
@@ -175,7 +269,18 @@ class Twitch extends Interface {
         'message-type': user['message-type'],
         emotes,
       },
+    };
+
+    log.trace(LOG_SCOPE, 'EMIT MESSAGE', {
+      channel,
+      username: payload.username,
+      self: !!self,
+      mod: payload.extra.mod,
+      broadcaster: isBroadcaster,
+      messageLength: typeof message === 'string' ? message.length : null,
     });
+
+    this.emit('message', payload);
   }
 
   /**
@@ -236,15 +341,36 @@ class Twitch extends Interface {
     const userId = this.getConfig('userId');
 
     if (!userId) {
+      log.trace(LOG_SCOPE, 'GET BADGES FAILED', { reason: 'userId is not set' });
       throw new Error('userId is not set.');
     }
 
-    const globalResponse = await this.api('get', 'chat/badges/global');
-    const customResponse = await this.api('get', 'chat/badges', {
-      broadcaster_id: userId,
-    });
+    log.trace(LOG_SCOPE, 'GET BADGES START', { userId });
 
-    return [...globalResponse?.data?.data, ...customResponse?.data?.data];
+    try {
+      const globalResponse = await this.api('get', 'chat/badges/global');
+      const customResponse = await this.api('get', 'chat/badges', {
+        broadcaster_id: userId,
+      });
+
+      const badges = [...globalResponse?.data?.data, ...customResponse?.data?.data];
+
+      log.trace(LOG_SCOPE, 'GET BADGES DONE', {
+        userId,
+        badgeCount: badges ? badges.length : 0,
+      });
+
+      return badges;
+    } catch (err) {
+      log.trace(LOG_SCOPE, 'GET BADGES ERROR', {
+        userId,
+        error: {
+          name: err && err.name ? err.name : 'Error',
+          message: err && err.message ? err.message : String(err),
+        },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -256,21 +382,43 @@ class Twitch extends Interface {
     const accessToken = this.getConfig('accessToken');
 
     if (!accessToken) {
+      log.trace(LOG_SCOPE, 'LOAD USER FAILED', { reason: 'accessToken not set' });
       throw new Error('accessToken not set.');
     }
 
-    const { data } = await this.api('get', 'users');
-    const user = data.data[0];
-
-    const channel = this.getConfig('channel', user.login);
-    const username = this.getConfig('username', user.login);
-    const userId = this.getConfig('userId', parseInt(user.id, 10));
-
-    this.setConfig({
-      channel,
-      username,
-      userId,
+    log.trace(LOG_SCOPE, 'LOAD USER START', {
+      accessToken: log.redactToken(accessToken),
+      channel: this.getConfig('channel') || null,
     });
+
+    try {
+      const { data } = await this.api('get', 'users');
+      const user = data.data[0];
+
+      const channel = this.getConfig('channel', user.login);
+      const username = this.getConfig('username', user.login);
+      const userId = this.getConfig('userId', parseInt(user.id, 10));
+
+      this.setConfig({
+        channel,
+        username,
+        userId,
+      });
+
+      log.trace(LOG_SCOPE, 'LOAD USER DONE', {
+        channel,
+        username,
+        userId,
+      });
+    } catch (err) {
+      log.trace(LOG_SCOPE, 'LOAD USER ERROR', {
+        error: {
+          name: err && err.name ? err.name : 'Error',
+          message: err && err.message ? err.message : String(err),
+        },
+      });
+      throw err;
+    }
   }
 
   /**
@@ -290,6 +438,17 @@ class Twitch extends Interface {
         Authorization: `Bearer ${this.getConfig('accessToken')}`,
       },
       responseType: 'json',
+    });
+
+    log.trace(LOG_SCOPE, 'SET CONFIG', {
+      clientId: this.getConfig('clientId') || null,
+      channel: this.getConfig('channel') || null,
+      username: this.getConfig('username') || null,
+      userId: this.getConfig('userId') || null,
+      accessToken: log.redactToken(this.getConfig('accessToken')),
+      parseEmoticon: this.getConfig('parseEmoticon'),
+      reconnect: this.getConfig('reconnect'),
+      formatMessages: this.getConfig('formatMessages'),
     });
   }
 
@@ -357,6 +516,11 @@ class Twitch extends Interface {
    * @returns {Twitch}
    */
   clientOn(evnt, callback) {
+    log.trace(LOG_SCOPE, 'CLIENT ON', {
+      event: evnt,
+      channel: this.getConfig('channel'),
+      hasClient: this.client !== null,
+    });
     this.client.on(evnt, callback);
 
     return this;
@@ -375,16 +539,47 @@ class Twitch extends Interface {
     const clientId = this.getConfig('clientId');
 
     if (!clientId) {
+      log.trace(LOG_SCOPE, 'API FAILED', { reason: 'clientId not set', method, url });
       throw new Error('clientId not set.');
     }
 
-    return this.http.request({
+    const requestUrl =
+      url + (method === 'get' ? '?' + new URLSearchParams(data).toString() : '');
+
+    log.trace(LOG_SCOPE, 'API REQUEST', {
       method,
-      url:
-        url +
-        (method === 'get' ? '?' + new URLSearchParams(data).toString() : ''),
-      data: method === 'get' ? undefined : data,
+      url: requestUrl,
+      clientId,
     });
+
+    return this.http
+      .request({
+        method,
+        url: requestUrl,
+        data: method === 'get' ? undefined : data,
+      })
+      .then(response => {
+        log.trace(LOG_SCOPE, 'API RESPONSE', {
+          method,
+          url: requestUrl,
+          status: response.status || 200,
+        });
+        return response;
+      })
+      .catch(err => {
+        log.trace(LOG_SCOPE, 'API ERROR', {
+          method,
+          url: requestUrl,
+          status: (err && err.status) || null,
+          statusText: (err && err.statusText) || null,
+          message: (err && err.message) || null,
+          error: {
+            name: err && err.name ? err.name : 'Error',
+            message: err && err.message ? err.message : String(err),
+          },
+        });
+        throw err;
+      });
   }
 
   /**
