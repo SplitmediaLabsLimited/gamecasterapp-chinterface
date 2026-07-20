@@ -4,6 +4,19 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-07-20
+
+### YouTube super-chat payload (`3.0.11`)
+
+- **`src/utils/youtube-super-chat.js`** — New helper to build nested `super-chat` event payloads with `id`, `publishedAt`, `type`, `author`, and `superChat` fields.
+- **`src/interfaces/youtube.js`** — `super-chat` now emits the nested payload instead of flat `superChatDetails`. Added `superStickerEvent` handling on the same event name.
+- **`src/utils/youtube-proto-mapper.js`** — Map `superStickerDetails` from YouTube Live stream protobuf messages so super stickers work on `youtubeLive`.
+- **`README.md`** — Updated `super-chat` listener documentation for YouTube and YouTube Live.
+
+**Breaking change:** Existing `super-chat` listeners that read flat fields (e.g. `data.userComment`) must use the nested shape (e.g. `data.superChat.userComment`, `data.author.displayName`).
+
+---
+
 ## 2026-07-07
 
 ### Debug logging

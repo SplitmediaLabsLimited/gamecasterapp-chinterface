@@ -106,6 +106,33 @@ function mapSnippet(snippet = {}) {
     };
   }
 
+  const superStickerDetails =
+    snippet.superStickerDetails || snippet.super_sticker_details;
+  if (superStickerDetails) {
+    const metadata =
+      superStickerDetails.superStickerMetadata ||
+      superStickerDetails.super_sticker_metadata ||
+      {};
+
+    mapped.superStickerDetails = {
+      amountMicros:
+        superStickerDetails.amountMicros ||
+        superStickerDetails.amount_micros ||
+        '0',
+      currency: superStickerDetails.currency || '',
+      amountDisplayString:
+        superStickerDetails.amountDisplayString ||
+        superStickerDetails.amount_display_string ||
+        '',
+      tier: superStickerDetails.tier || 0,
+      superStickerMetadata: {
+        stickerId: metadata.stickerId || metadata.sticker_id || '',
+        altText: metadata.altText || metadata.alt_text || '',
+        language: metadata.language || metadata.alt_text_language || '',
+      },
+    };
+  }
+
   const messageDeletedDetails =
     snippet.messageDeletedDetails || snippet.message_deleted_details;
   if (messageDeletedDetails) {

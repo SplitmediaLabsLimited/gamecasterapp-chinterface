@@ -282,11 +282,26 @@ youtube.on('super-chat', (data) => {
   /**
    * `data` will always return the following structure:
    *
-   * {integer} amountMicros - The amount super chatted
-   * {string} currency - The currency code that was super chatted
-   * {string} amountDisplayString - Formatted amount with currency symbol prefixed
-   * {string} userComment - The comment added by the user super chatting
-   * {integer} tier - The YouTube defined tier based on the amount super chatted. See: https://support.google.com/youtube/answer/7277005
+   * {string} id - The liveChatMessage id
+   * {string} publishedAt - ISO 8601 timestamp
+   * {string} type - 'superChatEvent' or 'superStickerEvent'
+   * {object} author - Supporter channel details
+   * ** {string} channelId
+   * ** {string} channelUrl
+   * ** {string} displayName
+   * ** {string} profileImageUrl
+   * ** {boolean} isVerified
+   * ** {boolean} isChatModerator
+   * ** {boolean} isChatOwner
+   * ** {boolean} isChatSponsor
+   * {object} superChat - Payment details
+   * ** {string|integer} amountMicros
+   * ** {string} currency
+   * ** {string} amountDisplayString - Formatted amount with currency symbol
+   * ** {string} userComment - Comment text (empty for super stickers)
+   * ** {integer} tier
+   * ** {boolean} isSuperSticker - Present and true for superStickerEvent
+   * ** {object} superStickerMetadata - Present for superStickerEvent
    */
   console.log('Super chat: ', data);
 });
@@ -448,6 +463,10 @@ youtubeLive.on('chat-ended', () => {
 
 // New super chat event
 youtubeLive.on('super-chat', (data) => {
+  /**
+   * Same nested structure as the `youtube` service super-chat event.
+   * See the YouTube super-chat listener documentation above.
+   */
   console.log('Super chat: ', data);
 });
 ```

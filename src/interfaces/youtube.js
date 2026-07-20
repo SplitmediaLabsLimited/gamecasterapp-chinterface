@@ -9,6 +9,7 @@ import axios from 'redaxios';
 import Interface from './interface';
 import { YOUTUBE_EMOJI_LIST } from '../constants';
 import log from '../utils/logger';
+import { buildSuperChatPayload } from '../utils/youtube-super-chat';
 
 class Youtube extends Interface {
   messagesId = [];
@@ -158,13 +159,11 @@ class Youtube extends Interface {
 
       switch (snippet.type) {
         case 'superChatEvent':
-          message = snippet.superChatDetails.userComment;
-          extra.amount = snippet.superChatDetails.amountDisplayString;
-          extra.amountMicros = snippet.superChatDetails.amountMicros;
-          extra.tier = snippet.superChatDetails.tier;
-          extra.currency = snippet.superChatDetails.currency;
-
-          this.emit('super-chat', snippet.superChatDetails);
+        case 'superStickerEvent':
+          this.emit(
+            'super-chat',
+            buildSuperChatPayload({ id, snippet, authorDetails })
+          );
           return;
 
         case 'messageDeletedEvent':
