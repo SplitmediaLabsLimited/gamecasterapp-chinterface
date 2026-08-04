@@ -10,6 +10,7 @@ Track notable changes here by date. Newest entries first.
 
 - **`src/constants.js`** — Added 39 missing global YouTube custom stickers after `:planet-orange-purple-ring:` (e.g. `:octopus-red-waving:`, `:face-red-smiling-live:`, `:stopwatch-blue-hand-timer:`) so they render as images instead of shortcode text.
 - **`src/constants.js`** — Fixed broken `:pride-face-orange-flowing:` image URL.
+- **`src/constants.js`** — Replaced stale image URLs for `:yt:`, `:oops:`, `:buffering:`, and the COVID sticker set (`:stayhome:` through `:shelterin:`) that were returning 404.
 
 ### Package metadata
 
