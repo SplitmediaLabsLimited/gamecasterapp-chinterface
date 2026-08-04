@@ -4,6 +4,21 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-08-04
+
+### YouTube emoji list (`3.0.12`)
+
+- **`src/constants.js`** — Added 39 missing global YouTube custom stickers after `:planet-orange-purple-ring:` (e.g. `:octopus-red-waving:`, `:face-red-smiling-live:`, `:stopwatch-blue-hand-timer:`) so they render as images instead of shortcode text.
+- **`src/constants.js`** — Fixed broken `:pride-face-orange-flowing:` image URL.
+
+### Package metadata
+
+- **`package.json`** — Version bump `3.0.11` → `3.0.12`.
+- **`package.json`** — Updated `repository` and `homepage` to the actual GitHub location (`SplitmediaLabsLimited/gamecasterapp-chinterface`).
+- **`.gitignore`** — Ignore local `.cursor/` rules so Cursor agent rules stay out of the repo.
+
+---
+
 ## 2026-07-20
 
 ### YouTube super-chat payload (`3.0.11`)

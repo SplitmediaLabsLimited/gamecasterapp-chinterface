@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "3.0.11",
+  "version": "3.0.12",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.js",
   "unpkg": "dist/chinterface.umd.js",
@@ -27,7 +27,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/gamecasterapp/chinterface.git"
+    "url": "https://github.com/SplitmediaLabsLimited/gamecasterapp-chinterface.git"
   },
   "keywords": [
     "Chat",
