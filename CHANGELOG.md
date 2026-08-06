@@ -4,6 +4,19 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-08-06
+
+### YouTube gift and live-chat events (`3.0.14`)
+
+- **`src/utils/youtube-live-events.js`** — Builders for `gift` and other missing live-chat types (membership gift, new sponsor, milestone, poll, retract, sponsor-only mode).
+- **`src/interfaces/youtube.js`** — Emit dedicated events from `handleMessages`; gift/poll id re-emit for combo/tally updates. Trace logs for emit/skip/update paths.
+- **`src/utils/youtube-debug-triggers.js`** — Prefix triggers `XBCTriggerGiftEvent` / `XBCTriggerSuperChatEvent`; remaining text → comment or companion message. Trace logs on match/emit.
+- **`src/utils/youtube-proto-mapper.js`** / **`stream_list.proto`** — Keep gift and related detail fields in sync.
+- **`README.md`** — Document `gift` payload fields and debug triggers.
+- **`package.json`** — Version bump `3.0.13` → `3.0.14`.
+
+---
+
 ## 2026-08-04
 
 ### YouTube emoji list (`3.0.12`)

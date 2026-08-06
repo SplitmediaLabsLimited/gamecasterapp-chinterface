@@ -305,7 +305,47 @@ youtube.on('super-chat', (data) => {
    */
   console.log('Super chat: ', data);
 });
+
+// Jewels gift event (live chat giftEvent)
+youtube.on('gift', (data) => {
+  /**
+   * `data` will always return the following structure:
+   *
+   * {string} id - Live chat message id (may repeat when comboCount updates)
+   * {string} publishedAt - ISO 8601 timestamp
+   * {string} type - 'giftEvent'
+   * {object} author - Viewer who redeemed Jewels
+   * {object} gift
+   * ** {string} giftName
+   * ** {number} jewelsAmount
+   * ** {string} giftUrl - Gift image/asset URL
+   * ** {number} giftDurationSeconds
+   * ** {number} giftDurationNanos
+   * ** {string} altText
+   * ** {string} language
+   * ** {boolean} hasVisualEffect
+   * ** {number} comboCount - 0 if not a combo
+   */
+  console.log('Gift: ', data);
+});
+
+// Other live-chat system events (same on youtubeLive):
+// membership-gift, membership-gift-received, new-sponsor,
+// member-milestone, poll, message-retracted, sponsor-only-mode
 ```
+
+### Debug triggers (QA)
+
+Send these as live chat text (prefix match). Works on `youtube` and `youtubeLive`.
+
+| Chat body | Result |
+|---|---|
+| `XBCTriggerSuperChatEvent` | Emits `super-chat` with sample $5.00 payload |
+| `XBCTriggerSuperChatEvent Hello` | Same; `superChat.userComment` = `Hello` |
+| `XBCTriggerGiftEvent` | Emits `gift` with sample Rose / Jewels payload |
+| `XBCTriggerGiftEvent Nice!` | Emits `gift` and a companion `message` with body `Nice!` |
+
+The trigger prefix is not emitted as a normal chat `message`.
 
 ## YouTube Live
 

@@ -177,6 +177,8 @@ message LiveChatPollDetails {
 
 message LiveChatGiftDetails {
   optional string gift_name = 1;
+  // Display duration for the gift asset (seconds + nanos).
+  optional int64 gift_duration_seconds = 2;
   optional int32 jewels_amount = 3;
   optional string gift_url = 4;
   optional string alt_text = 5;

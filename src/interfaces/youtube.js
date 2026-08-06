@@ -10,6 +10,16 @@ import Interface from './interface';
 import { YOUTUBE_EMOJI_LIST } from '../constants';
 import log from '../utils/logger';
 import { buildSuperChatPayload } from '../utils/youtube-super-chat';
+import {
+  buildGiftPayload,
+  buildMembershipGiftPayload,
+  buildMembershipGiftReceivedPayload,
+  buildMemberMilestonePayload,
+  buildNewSponsorPayload,
+  buildPollPayload,
+  buildSponsorOnlyModePayload,
+} from '../utils/youtube-live-events';
+import { maybeEmitDebugTrigger } from '../utils/youtube-debug-triggers';
 
 class Youtube extends Interface {
   messagesId = [];
@@ -139,16 +149,29 @@ class Youtube extends Interface {
       ids: list.map((item) => item.id),
     });
 
-    list.forEach(({ id, snippet, authorDetails }) => {
-      if (this.messagesId.includes(id)) {
+    list.forEach((item) => {
+      const { id, snippet = {} } = item;
+      const authorDetails = item.authorDetails || {};
+      const type = snippet.type;
+      const isUpdateable = type === 'giftEvent' || type === 'pollEvent';
+      const seen = this.messagesId.includes(id);
+
+      if (seen && !isUpdateable) {
+        log.trace('YOUTUBE', 'SKIP DUPLICATE', { id, type });
         return;
       }
 
-      this.messagesId.push(id);
+      if (seen && isUpdateable) {
+        log.trace('YOUTUBE', 'RE-EMIT UPDATE', { id, type });
+      }
+
+      if (!seen) {
+        this.messagesId.push(id);
+      }
 
       let message = snippet.displayMessage || '';
       let extra = {
-        type: snippet.type,
+        type,
         authorChannelId: authorDetails.channelId,
         image: authorDetails.profileImageUrl || '',
         moderator: authorDetails.isChatModerator,
@@ -157,16 +180,143 @@ class Youtube extends Interface {
         verified: authorDetails.isVerified,
       };
 
-      switch (snippet.type) {
+      switch (type) {
         case 'superChatEvent':
-        case 'superStickerEvent':
-          this.emit(
-            'super-chat',
-            buildSuperChatPayload({ id, snippet, authorDetails })
-          );
+        case 'superStickerEvent': {
+          const payload = buildSuperChatPayload({ id, snippet, authorDetails });
+          log.trace('YOUTUBE', 'EMIT SUPER-CHAT', {
+            id,
+            type: payload.type,
+            amount: payload.superChat && payload.superChat.amountDisplayString,
+            username: payload.author && payload.author.displayName,
+          });
+          this.emit('super-chat', payload);
           return;
+        }
+
+        case 'giftEvent': {
+          const payload = buildGiftPayload({ id, snippet, authorDetails });
+          log.trace('YOUTUBE', 'EMIT GIFT', {
+            id,
+            giftName: payload.gift && payload.gift.giftName,
+            jewelsAmount: payload.gift && payload.gift.jewelsAmount,
+            comboCount: payload.gift && payload.gift.comboCount,
+            username: payload.author && payload.author.displayName,
+            isUpdate: seen,
+          });
+          this.emit('gift', payload);
+          return;
+        }
+
+        case 'membershipGiftingEvent': {
+          const payload = buildMembershipGiftPayload({
+            id,
+            snippet,
+            authorDetails,
+          });
+          log.trace('YOUTUBE', 'EMIT MEMBERSHIP-GIFT', {
+            id,
+            count:
+              payload.membershipGift &&
+              payload.membershipGift.giftMembershipsCount,
+            level:
+              payload.membershipGift &&
+              payload.membershipGift.giftMembershipsLevelName,
+          });
+          this.emit('membership-gift', payload);
+          return;
+        }
+
+        case 'giftMembershipReceivedEvent': {
+          const payload = buildMembershipGiftReceivedPayload({
+            id,
+            snippet,
+            authorDetails,
+          });
+          log.trace('YOUTUBE', 'EMIT MEMBERSHIP-GIFT-RECEIVED', {
+            id,
+            level:
+              payload.membershipGiftReceived &&
+              payload.membershipGiftReceived.memberLevelName,
+            gifterChannelId:
+              payload.membershipGiftReceived &&
+              payload.membershipGiftReceived.gifterChannelId,
+          });
+          this.emit('membership-gift-received', payload);
+          return;
+        }
+
+        case 'newSponsorEvent': {
+          const payload = buildNewSponsorPayload({
+            id,
+            snippet,
+            authorDetails,
+          });
+          log.trace('YOUTUBE', 'EMIT NEW-SPONSOR', {
+            id,
+            level: payload.sponsor && payload.sponsor.memberLevelName,
+            isUpgrade: payload.sponsor && payload.sponsor.isUpgrade,
+          });
+          this.emit('new-sponsor', payload);
+          return;
+        }
+
+        case 'memberMilestoneChatEvent': {
+          const payload = buildMemberMilestonePayload({
+            id,
+            snippet,
+            authorDetails,
+          });
+          log.trace('YOUTUBE', 'EMIT MEMBER-MILESTONE', {
+            id,
+            months: payload.milestone && payload.milestone.memberMonth,
+            level: payload.milestone && payload.milestone.memberLevelName,
+          });
+          this.emit('member-milestone', payload);
+          return;
+        }
+
+        case 'pollEvent': {
+          const payload = buildPollPayload({ id, snippet, authorDetails });
+          log.trace('YOUTUBE', 'EMIT POLL', {
+            id,
+            status: payload.poll && payload.poll.status,
+            question: payload.poll && payload.poll.questionText,
+            isUpdate: seen,
+          });
+          this.emit('poll', payload);
+          return;
+        }
+
+        case 'messageRetractedEvent': {
+          const retractedId = (snippet.messageRetractedDetails || {})
+            .retractedMessageId;
+          log.trace('YOUTUBE', 'EMIT MESSAGE-RETRACTED', {
+            id,
+            retractedMessageId: retractedId,
+          });
+          this.emit('message-retracted', retractedId);
+          return;
+        }
+
+        case 'sponsorOnlyModeStartedEvent':
+        case 'sponsorOnlyModeEndedEvent': {
+          const payload = buildSponsorOnlyModePayload({ id, snippet });
+          log.trace('YOUTUBE', 'EMIT SPONSOR-ONLY-MODE', {
+            id,
+            type: payload.type,
+          });
+          this.emit('sponsor-only-mode', payload);
+          return;
+        }
 
         case 'messageDeletedEvent':
+          log.trace('YOUTUBE', 'EMIT DELETE-MESSAGE', {
+            id,
+            deletedMessageId:
+              snippet.messageDeletedDetails &&
+              snippet.messageDeletedDetails.deletedMessageId,
+          });
           this.emit(
             'delete-message',
             snippet.messageDeletedDetails.deletedMessageId
@@ -174,12 +324,50 @@ class Youtube extends Interface {
           return;
 
         case 'userBannedEvent':
+          log.trace('YOUTUBE', 'EMIT USER-BANNED', { id });
           this.emit('user-banned', snippet.userBannedDetails);
           return;
 
         case 'chatEndedEvent':
+          log.trace('YOUTUBE', 'EMIT CHAT-ENDED', { id });
           this.emit('chat-ended');
           return;
+
+        case 'tombstone':
+        case 'invalidType':
+        case 'fanFundingEvent':
+          log.trace('YOUTUBE', 'SKIP NON-USER EVENT', { id, type });
+          return;
+      }
+
+      const debugResult = maybeEmitDebugTrigger(this, {
+        id,
+        snippet,
+        authorDetails,
+      });
+
+      if (debugResult === true) {
+        log.trace('YOUTUBE', 'DEBUG TRIGGER HANDLED', {
+          id,
+          kind: 'super-chat',
+        });
+        return;
+      }
+
+      if (debugResult && debugResult.giftCompanionText) {
+        log.trace('YOUTUBE', 'DEBUG TRIGGER HANDLED', {
+          id,
+          kind: 'gift',
+          companionText: debugResult.giftCompanionText,
+        });
+        message = debugResult.giftCompanionText;
+      } else if (debugResult) {
+        log.trace('YOUTUBE', 'DEBUG TRIGGER HANDLED', {
+          id,
+          kind: 'gift',
+          companionText: '',
+        });
+        return;
       }
 
       let body = this.filterXSS(message);

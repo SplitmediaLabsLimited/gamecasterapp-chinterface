@@ -172,6 +172,129 @@ function mapSnippet(snippet = {}) {
     };
   }
 
+  const messageRetractedDetails =
+    snippet.messageRetractedDetails || snippet.message_retracted_details;
+  if (messageRetractedDetails) {
+    mapped.messageRetractedDetails = {
+      retractedMessageId:
+        messageRetractedDetails.retractedMessageId ||
+        messageRetractedDetails.retracted_message_id ||
+        '',
+    };
+  }
+
+  const newSponsorDetails =
+    snippet.newSponsorDetails || snippet.new_sponsor_details;
+  if (newSponsorDetails) {
+    mapped.newSponsorDetails = {
+      memberLevelName:
+        newSponsorDetails.memberLevelName ||
+        newSponsorDetails.member_level_name ||
+        '',
+      isUpgrade: Boolean(
+        newSponsorDetails.isUpgrade ?? newSponsorDetails.is_upgrade ?? false
+      ),
+    };
+  }
+
+  const memberMilestoneChatDetails =
+    snippet.memberMilestoneChatDetails ||
+    snippet.member_milestone_chat_details;
+  if (memberMilestoneChatDetails) {
+    mapped.memberMilestoneChatDetails = {
+      memberLevelName:
+        memberMilestoneChatDetails.memberLevelName ||
+        memberMilestoneChatDetails.member_level_name ||
+        '',
+      memberMonth:
+        memberMilestoneChatDetails.memberMonth ||
+        memberMilestoneChatDetails.member_month ||
+        0,
+      userComment:
+        memberMilestoneChatDetails.userComment ||
+        memberMilestoneChatDetails.user_comment ||
+        '',
+    };
+  }
+
+  const membershipGiftingDetails =
+    snippet.membershipGiftingDetails ||
+    snippet.membership_gifting_details;
+  if (membershipGiftingDetails) {
+    mapped.membershipGiftingDetails = {
+      giftMembershipsCount:
+        membershipGiftingDetails.giftMembershipsCount ||
+        membershipGiftingDetails.gift_memberships_count ||
+        0,
+      giftMembershipsLevelName:
+        membershipGiftingDetails.giftMembershipsLevelName ||
+        membershipGiftingDetails.gift_memberships_level_name ||
+        '',
+    };
+  }
+
+  const giftMembershipReceivedDetails =
+    snippet.giftMembershipReceivedDetails ||
+    snippet.gift_membership_received_details;
+  if (giftMembershipReceivedDetails) {
+    mapped.giftMembershipReceivedDetails = {
+      memberLevelName:
+        giftMembershipReceivedDetails.memberLevelName ||
+        giftMembershipReceivedDetails.member_level_name ||
+        '',
+      gifterChannelId:
+        giftMembershipReceivedDetails.gifterChannelId ||
+        giftMembershipReceivedDetails.gifter_channel_id ||
+        '',
+      associatedMembershipGiftingMessageId:
+        giftMembershipReceivedDetails.associatedMembershipGiftingMessageId ||
+        giftMembershipReceivedDetails.associated_membership_gifting_message_id ||
+        '',
+    };
+  }
+
+  const pollDetails = snippet.pollDetails || snippet.poll_details;
+  if (pollDetails) {
+    const metadata = pollDetails.metadata || {};
+    mapped.pollDetails = {
+      status: pollDetails.status || 0,
+      metadata: {
+        questionText: metadata.questionText || metadata.question_text || '',
+        options: (metadata.options || []).map((option = {}) => ({
+          optionText: option.optionText || option.option_text || '',
+          tally: option.tally || 0,
+        })),
+      },
+    };
+  }
+
+  const giftDetails =
+    snippet.giftDetails ||
+    snippet.gift_details ||
+    snippet.giftEventDetails?.giftMetadata ||
+    snippet.gift_event_details?.gift_metadata;
+  if (giftDetails) {
+    const duration =
+      giftDetails.giftDuration || giftDetails.gift_duration || {};
+
+    mapped.giftDetails = {
+      giftName: giftDetails.giftName || giftDetails.gift_name || '',
+      jewelsAmount:
+        giftDetails.jewelsAmount || giftDetails.jewels_amount || 0,
+      giftUrl: giftDetails.giftUrl || giftDetails.gift_url || '',
+      altText: giftDetails.altText || giftDetails.alt_text || '',
+      language: giftDetails.language || '',
+      hasVisualEffect: Boolean(
+        giftDetails.hasVisualEffect ?? giftDetails.has_visual_effect ?? false
+      ),
+      comboCount: giftDetails.comboCount || giftDetails.combo_count || 0,
+      giftDuration: {
+        seconds: duration.seconds || 0,
+        nanos: duration.nanos || 0,
+      },
+    };
+  }
+
   return mapped;
 }
 

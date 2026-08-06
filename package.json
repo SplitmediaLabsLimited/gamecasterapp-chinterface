@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "3.0.13",
+  "version": "3.0.14",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.js",
   "unpkg": "dist/chinterface.umd.js",
@@ -10,6 +10,7 @@
     "build": "microbundle --globals tmi.js=tmi --external tmi.js -f modern,cjs,umd",
     "format": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'",
     "test:super-chat": "node test/node/youtube-super-chat.test.js",
+    "test:live-events": "node test/node/youtube-live-events.test.js",
     "prepare": "yarn run build"
   },
   "devDependencies": {
