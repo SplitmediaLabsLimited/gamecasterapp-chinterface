@@ -343,9 +343,11 @@ Send these as live chat text (prefix match). Works on `youtube` and `youtubeLive
 | `XBCTriggerSuperChatEvent` | Emits `super-chat` with sample $5.00 payload |
 | `XBCTriggerSuperChatEvent Hello` | Same; `superChat.userComment` = `Hello` |
 | `XBCTriggerGiftEvent` | Emits `gift` with sample Rose / Jewels payload |
-| `XBCTriggerGiftEvent Nice!` | Emits `gift` and a companion `message` with body `Nice!` |
+| `XBCTriggerGiftEvent Nice!` | Emits `gift` with sample Rose / Jewels payload (extra text does not change the gift payload) |
 
-The trigger prefix is not emitted as a normal chat `message`.
+In every case the original chat line is **also** emitted as a normal `message`
+with its full, unmodified text (the `XBCTrigger…` prefix included). This lets
+debug triggers appear in chat views while still firing the fake event.
 
 ## YouTube Live
 

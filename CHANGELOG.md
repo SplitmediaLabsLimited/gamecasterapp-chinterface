@@ -4,6 +4,18 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-08-08
+
+### YouTube debug triggers always emit the original message (`3.0.15`)
+
+- **`src/interfaces/youtube.js`** — Debug triggers (`XBCTriggerGiftEvent` / `XBCTriggerSuperChatEvent`) no longer suppress or trim the normal chat `message`. The fake `gift`/`super-chat` still fires, and the original chat line is emitted as a `message` with its full, unmodified text (prefix included).
+- **`src/utils/youtube-debug-triggers.js`** — Updated docstring; return shape kept only for trace logging (no longer used to gate message emission).
+- **`test/node/youtube-live-events.test.js`** — Assert triggers now emit a `message` with the full original text.
+- **`README.md`** — Document that debug triggers also emit the original `message`.
+- **`package.json`** — Version bump `3.0.14` → `3.0.15`.
+
+---
+
 ## 2026-08-06
 
 ### YouTube gift and live-chat events (`3.0.14`)

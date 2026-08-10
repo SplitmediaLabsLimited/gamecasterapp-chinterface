@@ -135,7 +135,7 @@ const triggerGiftOnly = capture('gift', [
 ]);
 assert.strictEqual(triggerGiftOnly.payload.type, 'giftEvent');
 assert.strictEqual(triggerGiftOnly.payload.gift.giftName, 'Rose');
-assert.strictEqual(triggerGiftOnly.messagePayload, null);
+assert.strictEqual(triggerGiftOnly.messagePayload.raw, 'XBCTriggerGiftEvent');
 
 const triggerGiftMessage = capture('gift', [
   {
@@ -149,7 +149,10 @@ const triggerGiftMessage = capture('gift', [
   },
 ]);
 assert.strictEqual(triggerGiftMessage.payload.gift.giftName, 'Rose');
-assert.strictEqual(triggerGiftMessage.messagePayload.raw, 'Nice!');
+assert.strictEqual(
+  triggerGiftMessage.messagePayload.raw,
+  'XBCTriggerGiftEvent Nice!'
+);
 
 const triggerSuperChat = capture('super-chat', [
   {
@@ -164,7 +167,10 @@ const triggerSuperChat = capture('super-chat', [
 ]);
 assert.strictEqual(triggerSuperChat.payload.type, 'superChatEvent');
 assert.strictEqual(triggerSuperChat.payload.superChat.userComment, 'Hello');
-assert.strictEqual(triggerSuperChat.messagePayload, null);
+assert.strictEqual(
+  triggerSuperChat.messagePayload.raw,
+  'XBCTriggerSuperChatEvent Hello'
+);
 
 const sponsor = capture('new-sponsor', [
   {

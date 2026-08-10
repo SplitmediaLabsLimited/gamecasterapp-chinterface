@@ -37,8 +37,12 @@ function parseTrigger(text) {
 }
 
 /**
- * If the chat body starts with a debug trigger prefix, emit fake gift/super-chat
- * and return true so the caller skips the normal message path for the trigger text.
+ * If the chat body starts with a debug trigger prefix, emit a fake
+ * gift/super-chat event. The original chat line is left untouched so the caller
+ * still emits it as a normal message with its full, original text.
+ *
+ * Returns `false` when no trigger matched, `true` for a super-chat trigger, and
+ * `{ giftCompanionText }` for a gift trigger (return shape kept for logging).
  */
 export function maybeEmitDebugTrigger(
   iface,

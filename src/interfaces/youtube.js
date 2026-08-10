@@ -346,28 +346,13 @@ class Youtube extends Interface {
         authorDetails,
       });
 
-      if (debugResult === true) {
+      if (debugResult) {
+        // Debug triggers fire a fake gift/super-chat, but the original chat
+        // line still flows through as a normal message with its full text.
         log.trace('YOUTUBE', 'DEBUG TRIGGER HANDLED', {
           id,
-          kind: 'super-chat',
+          kind: debugResult === true ? 'super-chat' : 'gift',
         });
-        return;
-      }
-
-      if (debugResult && debugResult.giftCompanionText) {
-        log.trace('YOUTUBE', 'DEBUG TRIGGER HANDLED', {
-          id,
-          kind: 'gift',
-          companionText: debugResult.giftCompanionText,
-        });
-        message = debugResult.giftCompanionText;
-      } else if (debugResult) {
-        log.trace('YOUTUBE', 'DEBUG TRIGGER HANDLED', {
-          id,
-          kind: 'gift',
-          companionText: '',
-        });
-        return;
       }
 
       let body = this.filterXSS(message);
