@@ -5,6 +5,7 @@ A unified interface for Chats around the world.
 ## Services Supported
 
 - Twitch (Read/Write)
+- Kick (Read/Write)
 - YouTube (Read/Write)
 - YouTube Live (Read/Write)
 - Facebook Live (Read/Write)
@@ -125,6 +126,153 @@ Requires `clientId` and `userId`. If you do not know the user ID, make a request
 ```
 // Get all badges for all connected Twitch channels
 const badges = await twitch.getBadges();
+```
+
+## Kick
+
+This interface reads live chat over Kick's public Pusher WebSocket (the same socket kick.com uses). Send and `loadUser()` use the official [Kick Public API](https://docs.kick.com/llms.txt). Live read is unofficial: Kick's documented Events API is webhooks-only, which this client library cannot receive.
+
+- [Chat](https://docs.kick.com/apis/chat)
+- [Users](https://docs.kick.com/apis/users)
+- [Channels](https://docs.kick.com/apis/channels)
+- [Webhook payloads](https://docs.kick.com/events/event-types) (shape reference only; not consumed)
+- [OAuth](https://docs.kick.com/getting-started/generating-tokens-oauth2-flow)
+
+Kick Public API requests are Bearer-only. Do **not** pass `clientId` (there is no Client-ID header). If a consumer still passes `clientId`, it is ignored.
+
+### Setup and Usage
+
+```js
+// Kick.
+
+import chinterface from 'chinterface';
+
+async function kick() {
+  const kick = chinterface.service('kick');
+
+  try {
+    // Set the default config values.
+    await kick.setConfig({
+      // Main configuration
+      channel: 'oyed', // Kick slug. If unknown, pass accessToken and call loadUser().
+      userId: 123456, // Optional; REQUIRED to send. Filled by loadUser() if omitted.
+      chatroomId: 259821, // Optional; resolved from slug on connect if omitted.
+
+      // Settings
+      reconnect: false, // Default: true [auto reconnect if connection is lost]
+      parseEmoticon: false, // Default: true [convert emoticons to images]
+      formatMessages: false, // Default: true [process message and convert emoticons]
+
+      // Optional; REQUIRED for sending/writing messages and loadUser()
+      accessToken: '...', // Kick user token (Bearer).
+      sendAs: 'user', // Optional; 'user' (default) or 'bot'
+    });
+
+    // If you do not know the username, channel or userId, make a request to loadUser(). It will set these values for you.
+    await kick.loadUser();
+
+    // Connect to the Pusher socket.
+    await kick.connect();
+
+    // To receive and listen for new, formatted messages.
+    kick.on('message', (data) => {
+      /**
+       * `data` will always return the following structure:
+       *
+       * {string} id - Kick message UUID.
+       * {string} username
+       * {string} body - The processed message, with <img> tags for emotes.
+       * {string} raw - The unprocessed message, direct from the service.
+       * {number} timestamp - The time in milliseconds.
+       * {Object} extra - Service-specific information.
+       *
+       * extra.colour          - sender.identity.color
+       * extra.badges          - Twitch-like object, e.g. { moderator: '1', subscriber: '3' }
+       * extra.subscriber      - boolean
+       * extra.mod             - boolean
+       * extra.broadcaster     - boolean
+       * extra.turbo           - always false (Kick has no turbo)
+       * extra.emotes          - { '4148074': 'HYPERCLAP' } or null
+       * extra.kickBadges      - raw Kick badge array
+       * extra.verified        - boolean
+       * extra.slug            - sender slug
+       * extra.identity        - raw Kick identity object
+       * extra.repliesTo       - reply metadata when present
+       */
+      console.log('New message', data);
+    });
+
+    // To send a message (POST /public/v1/chat, max 500 characters).
+    kick.send('test message');
+
+    // Disconnect from the socket server.
+    await kick.disconnect();
+  } catch (e) {
+    console.log(e);
+  }
+}
+```
+
+### Fetch and Set Kick User Information
+
+In cases where you do not know the `userId`, `channel` or `username`, you can use the `loadUser()` function to set the config for you.
+
+Requires `accessToken` only (no `clientId`). This function will NOT overwrite any previously set properties. It does **not** set `chatroomId` — the official channels API has no chatroom id. `connect()` resolves `chatroomId` from the Kick slug (`GET https://kick.com/api/v2/channels/{slug}`). If that unofficial lookup fails (Cloudflare), pass `chatroomId` in `setConfig`.
+
+```
+await kick.loadUser();
+```
+
+### Accessing Kick chatroom events
+
+Chinterface provides a pass-through for Kick Pusher chatroom events. This is useful when you want to listen to chat clears, deletes, or bans. Callbacks receive the **parsed JSON `data` object**.
+
+`cheer` / `clearchat` / `timeout` / `ban` are Twitch TMI names and will not fire on Kick.
+
+```
+// Chat was cleared — remove all messages (Twitch equivalent: clearchat)
+kick.clientOn('App\\Events\\ChatroomClearEvent', (data) => {
+  // Remove all messages for the channel
+});
+
+// A viewer sent a chat message (also available via on('message'))
+// kick.clientOn('App\\Events\\ChatMessageEvent', (data) => {});
+
+// A chat message was deleted — remove that message from the UI
+// kick.clientOn('App\\Events\\MessageDeletedEvent', (data) => {});
+
+// A user was banned or timed out — remove that user's messages
+// kick.clientOn('App\\Events\\UserBannedEvent', (data) => {});
+
+// A user ban/timeout was lifted
+// kick.clientOn('App\\Events\\UserUnbannedEvent', (data) => {});
+
+// A message was pinned in chat
+// kick.clientOn('App\\Events\\PinnedMessageCreatedEvent', (data) => {});
+
+// A pinned message was removed
+// kick.clientOn('App\\Events\\PinnedMessageDeletedEvent', (data) => {});
+
+// A user subscribed or renewed
+// kick.clientOn('App\\Events\\SubscriptionEvent', (data) => {});
+
+// A user gifted one or more subs
+// kick.clientOn('App\\Events\\GiftedSubscriptionsEvent', (data) => {});
+
+// Follower count / follow activity on the channel
+// kick.clientOn('App\\Events\\FollowersUpdatedEvent', (data) => {});
+
+// Another channel hosted this channel
+// kick.clientOn('App\\Events\\StreamHostEvent', (data) => {});
+
+// Chatroom settings changed (slow mode, sub-only, etc.)
+// kick.clientOn('App\\Events\\ChatroomUpdatedEvent', (data) => {});
+
+// A chat poll was created or updated
+// kick.clientOn('App\\Events\\PollUpdateEvent', (data) => {});
+
+// A channel reward was redeemed
+// kick.clientOn('App\\Events\\RewardRedeemedEvent', (data) => {});
 ```
 
 ## YouTube

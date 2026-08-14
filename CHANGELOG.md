@@ -4,6 +4,19 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-08-14
+
+### Kick chat service (`3.0.16`)
+
+- **`src/interfaces/kick.js`** — New Kick service: live read over Kick’s public Pusher WebSocket, send/`loadUser` via official Kick Public API (Bearer only, no `clientId`). Unified `on('message')` payload matches Twitch field names for IRC-style viewers; `clientOn` passthrough for raw Pusher chatroom events.
+- **`src/utils/kick-pusher.js`** — Frame decode (double-encoded `data`), emote token → Kick CDN `<img>`, Twitch-like badge mapping, named Pusher event constants.
+- **`src/bags/interfaces.js` / `src/chat.js`** — Register `chinterface.service('kick')`.
+- **`test/node/kick-events.test.js`** — Parse/emote/unified payload/`clientOn` dispatch; ignore `pusher:*` protocol events.
+- **`README.md`** — Kick usage, `loadUser()`, unified message shape, commented `clientOn` event catalog.
+- **`package.json`** — Version bump `3.0.15` → `3.0.16`.
+
+---
+
 ## 2026-08-08
 
 ### YouTube debug triggers always emit the original message (`3.0.15`)

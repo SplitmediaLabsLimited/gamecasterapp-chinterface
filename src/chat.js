@@ -12,6 +12,7 @@ import {
   youtube,
   youtubeLive,
   facebook,
+  kick,
 } from './bags/interfaces';
 
 const SERVICES = {
@@ -19,6 +20,7 @@ const SERVICES = {
   youtube,
   youtubeLive,
   facebook,
+  kick,
 };
 
 class Chat {

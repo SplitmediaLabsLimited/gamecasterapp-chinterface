@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "3.0.15",
+  "version": "3.0.16",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.js",
   "unpkg": "dist/chinterface.umd.js",
@@ -11,6 +11,7 @@
     "format": "prettier --single-quote --tab-width 2 --write 'src/**/*.js'",
     "test:super-chat": "node test/node/youtube-super-chat.test.js",
     "test:live-events": "node test/node/youtube-live-events.test.js",
+    "test:kick": "node test/node/kick-events.test.js",
     "prepare": "yarn run build"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
   "keywords": [
     "Chat",
     "Twitch",
+    "Kick",
     "Youtube"
   ],
   "author": "Gamecaster",

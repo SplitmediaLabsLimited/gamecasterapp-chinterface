@@ -9,5 +9,6 @@ import twitch from '../interfaces/twitch';
 import youtube from '../interfaces/youtube';
 import youtubeLive from '../interfaces/youtube-live';
 import facebook from '../interfaces/facebook';
+import kick from '../interfaces/kick';
 
-export { twitch, youtube, youtubeLive, facebook };
+export { twitch, youtube, youtubeLive, facebook, kick };
