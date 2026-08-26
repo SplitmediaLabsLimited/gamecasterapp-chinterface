@@ -373,6 +373,8 @@ class Kick extends Interface {
         broadcaster: fields.broadcaster,
         emotes: Object.keys(fields.emotes).length ? fields.emotes : null,
         kickBadges: fields.kickBadges,
+        kickBadgesV2: fields.kickBadgesV2,
+        level: fields.level,
         verified: fields.verified,
         slug: fields.slug,
         identity: fields.identity,
@@ -384,6 +386,22 @@ class Kick extends Interface {
       username: payload.username,
       mod: payload.extra.mod,
       broadcaster: payload.extra.broadcaster,
+      subscriber: payload.extra.subscriber,
+      level: payload.extra.level,
+      badges: payload.extra.badges,
+      kickBadges: (fields.kickBadges || []).map((badge) =>
+        typeof badge === 'string'
+          ? badge
+          : {
+              type: badge && (badge.type || badge.name),
+              count: badge && badge.count,
+            }
+      ),
+      kickBadgesV2: (fields.kickBadgesV2 || []).map((badge) => ({
+        name: badge && (badge.name || badge.type),
+        selected: badge && badge.selected,
+        level: badge && badge.metadata && badge.metadata.level,
+      })),
       messageLength: fields.content.length,
     });
 

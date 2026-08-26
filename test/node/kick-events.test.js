@@ -25,6 +25,23 @@ const innerMessage = {
         { type: 'moderator', text: 'Moderator' },
         { type: 'subscriber', text: 'Subscriber', count: 3 },
       ],
+      badges_v2: [
+        {
+          name: 'level',
+          badge_type: 'global',
+          image_url: 'https://ext.cdn.kick.com/chat/badges/5.png',
+          metadata: { level: 5 },
+          selected: true,
+          sort_order: 1,
+        },
+        {
+          name: 'level',
+          badge_type: 'global',
+          metadata: { level: 4 },
+          selected: false,
+          sort_order: 1,
+        },
+      ],
     },
   },
 };
@@ -62,6 +79,21 @@ assert.strictEqual(message.extra.broadcaster, false);
 assert.strictEqual(message.extra.turbo, false);
 assert.strictEqual(message.extra.badges.moderator, '1');
 assert.strictEqual(message.extra.badges.subscriber, '3');
+assert.strictEqual(message.extra.badges.level, '5');
+assert.strictEqual(message.extra.level, 5);
+assert.strictEqual(message.extra.kickBadgesV2.length, 2);
+assert.ok(
+  message.extra.kickBadges.some(
+    (badge) => badge && badge.type === 'level' && badge.count === 5
+  ),
+  'selected badges_v2 level should be merged into kickBadges'
+);
+assert.ok(
+  !message.extra.kickBadges.some(
+    (badge) => badge && badge.type === 'level' && badge.count === 4
+  ),
+  'unselected badges_v2 must not be merged into kickBadges'
+);
 assert.strictEqual(message.extra.emotes['4148074'], 'HYPERCLAP');
 assert.strictEqual(message.extra.slug, 'sender_name');
 assert.ok(

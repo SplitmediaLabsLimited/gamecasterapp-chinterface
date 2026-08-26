@@ -193,7 +193,9 @@ async function kick() {
        * extra.broadcaster     - boolean
        * extra.turbo           - always false (Kick has no turbo)
        * extra.emotes          - { '4148074': 'HYPERCLAP' } or null
-       * extra.kickBadges      - raw Kick badge array
+       * extra.kickBadges      - raw Kick badge array (identity.badges plus selected badges_v2)
+       * extra.kickBadgesV2    - identity.badges_v2 (global/level badges)
+       * extra.level           - Kick watch-time level from selected badges_v2, or null
        * extra.verified        - boolean
        * extra.slug            - sender slug
        * extra.identity        - raw Kick identity object

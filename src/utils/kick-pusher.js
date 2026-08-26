@@ -112,6 +112,113 @@ export function parsePusherFrame(raw) {
 }
 
 /**
+ * Kick’s numbered watch-time badge lives on `identity.badges_v2`
+ * (`name: "level"`, `metadata.level`, `selected`), not on `identity.badges`.
+ *
+ * @param {object} badge
+ * @return {object|null}
+ */
+export function normalizeBadgeV2(badge) {
+  if (!badge || typeof badge !== 'object') {
+    return null;
+  }
+
+  if (badge.selected === false) {
+    return null;
+  }
+
+  const type = badge.name || badge.type;
+  if (!type) {
+    return null;
+  }
+
+  const metadata =
+    badge.metadata && typeof badge.metadata === 'object' ? badge.metadata : {};
+  const level = metadata.level != null ? metadata.level : badge.count;
+
+  return {
+    type,
+    name: type,
+    text: badge.text || (level != null ? `Level ${level}` : type),
+    count: level != null ? level : badge.count,
+    image_url: badge.image_url || badge.src || badge.url || null,
+    badge_type: badge.badge_type || null,
+    selected: badge.selected,
+    metadata,
+    sort_order: badge.sort_order,
+  };
+}
+
+/**
+ * @param {object} identity
+ * @param {object} sender
+ * @return {Array}
+ */
+export function collectIdentityBadges(identity, sender) {
+  const ident = identity && typeof identity === 'object' ? identity : {};
+  const from = sender && typeof sender === 'object' ? sender : {};
+  const v1 =
+    (ident.badges && ident.badges.length ? ident.badges : from.badges) || [];
+  const v2 = ident.badges_v2 || from.badges_v2 || [];
+  const merged = Array.isArray(v1) ? v1.slice() : [];
+
+  if (Array.isArray(v2)) {
+    v2.forEach((badge) => {
+      const normalized = normalizeBadgeV2(badge);
+      if (normalized) {
+        merged.push(normalized);
+      }
+    });
+  }
+
+  return merged;
+}
+
+/**
+ * @param {object} identity
+ * @param {Array} badges
+ * @return {number|null}
+ */
+export function extractKickLevel(identity, badges) {
+  const ident = identity && typeof identity === 'object' ? identity : {};
+
+  if (ident.level != null && ident.level !== '') {
+    const n = parseInt(ident.level, 10);
+    if (Number.isFinite(n) && n > 0) {
+      return n;
+    }
+  }
+
+  const lists = [ident.badges_v2, badges];
+  for (let i = 0; i < lists.length; i++) {
+    const list = lists[i];
+    if (!Array.isArray(list)) {
+      continue;
+    }
+
+    for (let j = 0; j < list.length; j++) {
+      const badge = list[j];
+      if (!badge || typeof badge !== 'object' || badge.selected === false) {
+        continue;
+      }
+
+      const type = badge.name || badge.type;
+      const metaLevel = badge.metadata && badge.metadata.level;
+      if (type !== 'level' && metaLevel == null) {
+        continue;
+      }
+
+      const n = parseInt(metaLevel != null ? metaLevel : badge.count, 10);
+      if (Number.isFinite(n) && n > 0) {
+        return n;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * @param {Array|string|null} badges
  * @return {object}
  */
@@ -151,8 +258,9 @@ export function extractChatFields(data) {
   const payload = data && typeof data === 'object' ? data : {};
   const sender = payload.sender || {};
   const identity = sender.identity || {};
-  const badges = identity.badges || [];
+  const badges = collectIdentityBadges(identity, sender);
   const twitchBadges = badgesToTwitchShape(badges);
+  const level = extractKickLevel(identity, badges);
   const content = payload.content != null ? String(payload.content) : '';
   const createdAt = payload.created_at || payload.createdAt;
   let timestamp = new Date().getTime();
@@ -180,6 +288,8 @@ export function extractChatFields(data) {
     colour: identity.color || identity.username_color || null,
     twitchBadges,
     kickBadges: badges,
+    kickBadgesV2: identity.badges_v2 || sender.badges_v2 || [],
+    level,
     subscriber: !!twitchBadges.subscriber,
     mod: !!twitchBadges.moderator,
     broadcaster: !!twitchBadges.broadcaster,

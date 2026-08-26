@@ -4,6 +4,23 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-08-26
+
+### Kick level badges (`3.0.17`)
+
+- **`src/utils/kick-pusher.js`** — Read Kick `identity.badges_v2` (watch-time `level` with `metadata.level` / `image_url` / `selected`) and merge selected entries into `kickBadges`.
+- **`src/interfaces/kick.js`** — Expose `extra.level` and `extra.kickBadgesV2`; log them on `EMIT MESSAGE`.
+- **`test/node/kick-events.test.js`** — Cover selected vs unselected `badges_v2` level badges.
+- **`package.json`** — Version bump `3.0.17` → `3.0.18`.
+
+### Kick chat badges (`3.0.17`)
+
+- **`src/interfaces/kick.js`** — Trace `EMIT MESSAGE` includes `subscriber`, `badges`, and `kickBadges` type/count so viewers can see subscriber-level data.
+- **`src/utils/kick-pusher.js`** — Fall back to `sender.badges` when `identity.badges` is empty.
+- **`package.json`** — Version bump `3.0.16` → `3.0.17`.
+
+---
+
 ## 2026-08-14
 
 ### Kick chat service (`3.0.16`)
