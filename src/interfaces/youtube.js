@@ -495,11 +495,21 @@ class Youtube extends Interface {
    * @param {object} error
    */
   checkError(error) {
+    const reason = error.errors && error.errors[0] && error.errors[0].reason;
+
+    log.trace('YOUTUBE', 'CHECK ERROR', {
+      code: error.code,
+      reason,
+      message: error.message,
+    });
+
     switch (parseInt(error.code)) {
       case 401:
+        log.trace('YOUTUBE', 'EMIT refresh-token');
         this.emit('refresh-token', error);
         break;
       default:
+        log.trace('YOUTUBE', 'EMIT error', { reason: reason || 'unknown' });
         this.emit('error', error);
         break;
     }

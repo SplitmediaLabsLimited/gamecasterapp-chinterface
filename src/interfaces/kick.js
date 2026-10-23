@@ -19,6 +19,10 @@ import {
   parsePusherFrame,
   replaceEmoteTokens,
 } from '../utils/kick-pusher';
+import {
+  needsTokenRefresh,
+  normalizeAuthError,
+} from '../utils/token-refresh';
 
 const LOG_SCOPE = 'KICK';
 const MAX_MESSAGE_LENGTH = 500;
@@ -537,6 +541,33 @@ class Kick extends Interface {
   }
 
   /**
+   * Check the error status and emit refresh-token or error.
+   *
+   * @param {*} error
+   */
+  checkError(error) {
+    const normalized = normalizeAuthError(error);
+
+    log.trace(LOG_SCOPE, 'CHECK ERROR', {
+      code: normalized.code,
+      status: normalized.status,
+      reason: normalized.reason,
+      message: normalized.message,
+    });
+
+    if (needsTokenRefresh('kick', error)) {
+      log.trace(LOG_SCOPE, 'EMIT refresh-token');
+      this.emit('refresh-token', normalized);
+      return;
+    }
+
+    log.trace(LOG_SCOPE, 'EMIT error', {
+      reason: normalized.reason || 'unknown',
+    });
+    this.emit('error', normalized);
+  }
+
+  /**
    * Name of the Interface.
    *
    * @return {string}
@@ -674,6 +705,7 @@ class Kick extends Interface {
             message: err && err.message ? err.message : String(err),
           },
         });
+        this.checkError(err);
         throw err;
       });
   }

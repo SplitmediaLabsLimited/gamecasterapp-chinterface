@@ -4,6 +4,21 @@ Track notable changes here by date. Newest entries first.
 
 ---
 
+## 2026-10-20
+
+### Token refresh events (`3.0.18`)
+
+- **`src/utils/token-refresh.js`** — Shared `needsTokenRefresh` / `normalizeAuthError` for Twitch Helix 401 and IRC login failure, Kick HTTP 401, Facebook Graph 190/102 and subcodes 463/467.
+- **`src/interfaces/twitch.js`** — `checkError` emits `refresh-token` on Helix 401 and IRC login failure (`connect` / `send` / `disconnected` / `notice`); logs `CHECK ERROR` then `EMIT refresh-token` or `EMIT error`.
+- **`src/interfaces/kick.js`** — `checkError` on Bearer `api()` 401 (send/loadUser); Pusher close is not treated as auth expiry.
+- **`src/interfaces/facebook.js`** — Preserve Graph `code` / `error_subcode` / `type` on API failures; poll/send/loadUser emit `refresh-token` instead of `error` when the token is expired.
+- **`src/interfaces/youtube.js`** — Polling `checkError` now logs `CHECK ERROR` / `EMIT refresh-token` like YouTube Live.
+- **`test/node/token-refresh.test.js`** — Cover Twitch 401 vs 403, IRC login, Kick 401, Facebook 190/463 vs permission errors.
+- **`README.md`** — Document `refresh-token` listeners for Twitch, Kick, and Facebook.
+- **`package.json`** — Version bump `3.0.17` → `3.0.18`.
+
+---
+
 ## 2026-08-26
 
 ### Kick level badges (`3.0.17`)

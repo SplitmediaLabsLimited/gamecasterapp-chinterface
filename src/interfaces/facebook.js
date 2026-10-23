@@ -8,6 +8,10 @@
 import axios from 'redaxios';
 import Interface from './interface';
 import log from '../utils/logger';
+import {
+  needsTokenRefresh,
+  normalizeAuthError,
+} from '../utils/token-refresh';
 
 const LOG_SCOPE = 'FACEBOOK';
 
@@ -142,9 +146,12 @@ class Facebook extends Interface {
 
       log.trace(LOG_SCOPE, 'FETCH ERROR', {
         message: error && error.message ? error.message : String(error),
+        code: error && error.code,
+        status: error && error.status,
+        error_subcode: error && error.error_subcode,
       });
 
-      this.emit('error', error);
+      this.checkError(error);
     }
   };
 
@@ -230,8 +237,11 @@ class Facebook extends Interface {
     } catch (e) {
       log.trace(LOG_SCOPE, 'SEND ERROR', {
         message: e && e.message ? e.message : String(e),
+        code: e && e.code,
+        status: e && e.status,
+        error_subcode: e && e.error_subcode,
       });
-      this.emit('error', e);
+      this.checkError(e);
     }
   }
 
@@ -257,8 +267,11 @@ class Facebook extends Interface {
     } catch (e) {
       log.trace(LOG_SCOPE, 'SEND TO PAGE ERROR', {
         message: e && e.message ? e.message : String(e),
+        code: e && e.code,
+        status: e && e.status,
+        error_subcode: e && e.error_subcode,
       });
-      this.emit('error', e);
+      this.checkError(e);
     }
   }
 
@@ -346,10 +359,18 @@ class Facebook extends Interface {
       accessToken: log.redactToken(accessToken),
     });
 
-    const { data } = await this.api('get', `me`, {
-      fields: 'id,name',
-      access_token: accessToken,
-    });
+    let data;
+
+    try {
+      const response = await this.api('get', `me`, {
+        fields: 'id,name',
+        access_token: accessToken,
+      });
+      data = response.data;
+    } catch (error) {
+      this.checkError(error);
+      throw error;
+    }
 
     const { id: userId, name: username } = data;
 
@@ -490,7 +511,21 @@ class Facebook extends Interface {
             }`
           : String(response));
 
-      throw new Error(message);
+      throw {
+        code: (fbError && fbError.code) || status,
+        status,
+        error_subcode: (fbError && fbError.error_subcode) || null,
+        type: (fbError && fbError.type) || null,
+        message,
+        errors: [
+          {
+            reason:
+              (fbError &&
+                (fbError.error_subcode || fbError.type || fbError.message)) ||
+              message,
+          },
+        ],
+      };
     }
   }
 
@@ -510,6 +545,35 @@ class Facebook extends Interface {
       /(access_token=)[^&]+/i,
       (match, prefix) => `${prefix}${log.redactToken(this.getConfig('accessToken'))}`
     );
+  }
+
+  /**
+   * Check the error status and emit refresh-token or error.
+   *
+   * @param {*} error
+   */
+  checkError(error) {
+    const normalized = normalizeAuthError(error);
+
+    log.trace(LOG_SCOPE, 'CHECK ERROR', {
+      code: normalized.code,
+      status: normalized.status,
+      reason: normalized.reason,
+      message: normalized.message,
+      error_subcode: normalized.error_subcode,
+      type: normalized.type,
+    });
+
+    if (needsTokenRefresh('facebook', error)) {
+      log.trace(LOG_SCOPE, 'EMIT refresh-token');
+      this.emit('refresh-token', normalized);
+      return;
+    }
+
+    log.trace(LOG_SCOPE, 'EMIT error', {
+      reason: normalized.reason || 'unknown',
+    });
+    this.emit('error', normalized);
   }
 
   /**

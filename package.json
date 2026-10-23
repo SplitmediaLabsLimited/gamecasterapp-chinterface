@@ -1,6 +1,6 @@
 {
   "name": "chinterface",
-  "version": "3.0.17",
+  "version": "3.0.18",
   "description": "Universal Chat interface library for popular stream services",
   "main": "dist/chinterface.js",
   "unpkg": "dist/chinterface.umd.js",
@@ -12,6 +12,7 @@
     "test:super-chat": "node test/node/youtube-super-chat.test.js",
     "test:live-events": "node test/node/youtube-live-events.test.js",
     "test:kick": "node test/node/kick-events.test.js",
+    "test:token-refresh": "node test/node/token-refresh.test.js",
     "prepare": "yarn run build"
   },
   "devDependencies": {

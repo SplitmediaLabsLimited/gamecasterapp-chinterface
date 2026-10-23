@@ -77,6 +77,14 @@ async function twitch() {
     // To send a message.
     twitch.send('test message');
 
+    // Helix HTTP 401 or IRC "Login authentication failed" / login_unsuccessful.
+    twitch.on('refresh-token', (errorDetails) => {
+      twitch.setConfig({
+        accessToken: 'new',
+      });
+      twitch.connect();
+    });
+
     // Disconnect from the socket server.
     await twitch.disconnect();
   } catch (e) {
@@ -206,6 +214,13 @@ async function kick() {
 
     // To send a message (POST /public/v1/chat, max 500 characters).
     kick.send('test message');
+
+    // Kick Public API HTTP 401 (Bearer send / loadUser). Live Pusher read does not use a token.
+    kick.on('refresh-token', (errorDetails) => {
+      kick.setConfig({
+        accessToken: 'new',
+      });
+    });
 
     // Disconnect from the socket server.
     await kick.disconnect();
@@ -725,6 +740,14 @@ async function facebook() {
     // and videoId is set.
     facebook.send('test message');
 
+    // Graph code 190 / 102, error_subcode 463 / 467, or HTTP 401 (not 403).
+    facebook.on('refresh-token', (errorDetails) => {
+      facebook.setConfig({
+        accessToken: 'new',
+      });
+      facebook.connect();
+    });
+
     // Stop polling.
     await facebook.disconnect();
   } catch (e) {
@@ -773,6 +796,11 @@ facebook.on('disconnected', () => {
 // A Graph API error occurred during polling
 facebook.on('error', (error) => {
   console.error(error);
+});
+
+// The page/user token expired or was revoked (Graph 190/102, subcode 463/467)
+facebook.on('refresh-token', (errorDetails) => {
+  console.log('Token expired', errorDetails);
 });
 ```
 

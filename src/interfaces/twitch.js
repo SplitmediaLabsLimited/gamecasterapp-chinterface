@@ -9,6 +9,10 @@ import tmi from 'tmi.js';
 import axios from 'redaxios';
 import Interface from './interface';
 import log from '../utils/logger';
+import {
+  needsTokenRefresh,
+  normalizeAuthError,
+} from '../utils/token-refresh';
 
 const LOG_SCOPE = 'TWITCH';
 
@@ -100,6 +104,10 @@ class Twitch extends Interface {
           wasConnected: this.connected,
         });
         this.connected = false;
+
+        if (needsTokenRefresh('twitch', reason)) {
+          this.checkError(reason);
+        }
       });
 
       this.client.on('reconnect', () => {
@@ -115,6 +123,10 @@ class Twitch extends Interface {
           msgtype: msgtype || null,
           message: message || null,
         });
+
+        if (needsTokenRefresh('twitch', { msgtype, message })) {
+          this.checkError({ msgtype, message });
+        }
       });
 
       this.client.connect().catch(err => {
@@ -126,6 +138,7 @@ class Twitch extends Interface {
             message: err && err.message ? err.message : String(err),
           },
         });
+        this.checkError(err);
         reject(err);
       });
     });
@@ -180,6 +193,7 @@ class Twitch extends Interface {
           message: err && err.message ? err.message : String(err),
         },
       });
+      this.checkError(err);
       throw err;
     }
   }
@@ -578,6 +592,7 @@ class Twitch extends Interface {
             message: err && err.message ? err.message : String(err),
           },
         });
+        this.checkError(err);
         throw err;
       });
   }
@@ -597,6 +612,33 @@ class Twitch extends Interface {
       message,
       self,
     });
+  }
+
+  /**
+   * Check the error status and emit refresh-token or error.
+   *
+   * @param {*} error
+   */
+  checkError(error) {
+    const normalized = normalizeAuthError(error);
+
+    log.trace(LOG_SCOPE, 'CHECK ERROR', {
+      code: normalized.code,
+      status: normalized.status,
+      reason: normalized.reason,
+      message: normalized.message,
+    });
+
+    if (needsTokenRefresh('twitch', error)) {
+      log.trace(LOG_SCOPE, 'EMIT refresh-token');
+      this.emit('refresh-token', normalized);
+      return;
+    }
+
+    log.trace(LOG_SCOPE, 'EMIT error', {
+      reason: normalized.reason || 'unknown',
+    });
+    this.emit('error', normalized);
   }
 }
 
